@@ -197,45 +197,7 @@ RtPacketObject::SetDataFormat(
 
 _Use_decl_annotations_
 NONPAGED_CODE_SEG
-void RtPacketObject::SetIsoPacketInfo(
-    IsoDirection direction,
-    ULONG        isoPacketSize,
-    ULONG        numIsoPackets
-)
-{
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry, %s, %d, %d", (direction == IsoDirection::Out) ? "eIsoOut" : "In", isoPacketSize, numIsoPackets);
-
-    RT_PACKET_INFO * rtPacketInfo = nullptr;
-    ULONG            numOfDevices = 0;
-
-    if (direction == IsoDirection::In)
-    {
-        rtPacketInfo = m_inputRtPacketInfo;
-        numOfDevices = m_numOfInputDevices;
-    }
-    else
-    {
-        rtPacketInfo = m_outputRtPacketInfo;
-        numOfDevices = m_numOfOutputDevices;
-    }
-
-    {
-        for (UCHAR deviceIndex = 0; deviceIndex < numOfDevices; deviceIndex++)
-        {
-            WdfSpinLockAcquire(rtPacketInfo[deviceIndex].PositionSpinLock);
-            rtPacketInfo[deviceIndex].IsoPacketSize = isoPacketSize;
-            rtPacketInfo[deviceIndex].NumIsoPackets = numIsoPackets;
-            // rtPacketInfo[deviceIndex].BufferLength  = isoPacketSize * numIsoPackets * UAC_MAX_IRP_NUMBER;
-            WdfSpinLockRelease(rtPacketInfo[deviceIndex].PositionSpinLock);
-        }
-    }
-
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit");
-}
-
-_Use_decl_annotations_
-NONPAGED_CODE_SEG
-void RtPacketObject::Reset(
+void RtPacketObject::ResetInternal(
     bool  isInput,
     ULONG deviceIndex
 )
@@ -258,23 +220,16 @@ void RtPacketObject::Reset(
 
     if (deviceIndex < numOfDevices)
     {
-        WdfSpinLockAcquire(rtPacketInfo[deviceIndex].PositionSpinLock);
-
-        rtPacketInfo[deviceIndex].IsoPacketSize = 0;
-        rtPacketInfo[deviceIndex].NumIsoPackets = 0;
-        rtPacketInfo[deviceIndex].RtPacketPosition = 0;
-        rtPacketInfo[deviceIndex].RtPacketEstimatedPosition = 0;
-        rtPacketInfo[deviceIndex].RtPacketCurrentPacket = 0;
-        rtPacketInfo[deviceIndex].LastPacketStartQpcPosition = 0;
-
-        WdfSpinLockRelease(rtPacketInfo[deviceIndex].PositionSpinLock);
+        InterlockedExchange64((LONG64 *)&rtPacketInfo[deviceIndex].RtPacketEstimatedPosition, 0);
+        InterlockedExchange64((LONG64 *)&rtPacketInfo[deviceIndex].LastPacketStartQpcPosition, 0);
+        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - index, estimatedQPCPosition, lastPacketStartQpcPosition, %d, %llu, %llu", deviceIndex, rtPacketInfo[deviceIndex].RtPacketEstimatedPosition, rtPacketInfo[deviceIndex].LastPacketStartQpcPosition);
     }
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit");
 }
 
 _Use_decl_annotations_
 NONPAGED_CODE_SEG
-void RtPacketObject::Reset(
+void RtPacketObject::ResetInternal(
     bool isInput
 )
 {
@@ -293,7 +248,7 @@ void RtPacketObject::Reset(
 
     for (ULONG deviceIndex = 0; deviceIndex < numOfDevices; deviceIndex++)
     {
-        Reset(isInput, deviceIndex);
+        ResetInternal(isInput, deviceIndex);
     }
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit");
@@ -305,8 +260,6 @@ void RtPacketObject::FeedOutputWriteBytes(
     ULONG /* ulByteCount */
 )
 {
-    // WdfSpinLockAcquire(m_outputRtPacketInfo[deviceIndex].PositionSpinLock);
-    // WdfSpinLockRelease(m_outputRtPacketInfo[deviceIndex].PositionSpinLock);
 }
 
 _Use_decl_annotations_
@@ -632,7 +585,7 @@ RtPacketObject::CopyFromRtPacketToOutputData(
             srcIndexInRtPacket = length - (rtPacketInfo->RtPacketSize - srcIndexInRtPacket);
             bytesCopiedSrcData += length;
             fedRtPacket = true;
-            TraceEvents(TRACE_LEVEL_WARNING, TRACE_DEVICE, " - rtPacketIndex, srcIndexInRtPacket, %u, %u", rtPacketIndex, srcIndexInRtPacket);
+            TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - rtPacketIndex, srcIndexInRtPacket, %u, %u", rtPacketIndex, srcIndexInRtPacket);
         }
     }
     break;
@@ -973,7 +926,6 @@ RtPacketObject::ResetCurrentPacket(
 
     InterlockedExchange((PLONG)&rtPacketInfo[deviceIndex].RtPacketCurrentPacket, 0);
     InterlockedExchange64((LONG64 *)&rtPacketInfo[deviceIndex].RtPacketPosition, 0);
-    InterlockedExchange64((LONG64 *)&rtPacketInfo[deviceIndex].LastPacketStartQpcPosition, 0);
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit");
 
@@ -1042,37 +994,24 @@ RtPacketObject::GetPresentationPosition(
     RETURN_NTSTATUS_IF_TRUE(deviceIndex >= numOfDevices, STATUS_INVALID_PARAMETER);
 
     ULONG     blockAlign = (bytesPerSample * rtPacketInfo[deviceIndex].channels);
-    ULONGLONG rtPacketPosition = InterlockedCompareExchange64((LONG64 *)&rtPacketInfo[deviceIndex].RtPacketEstimatedPosition, -1, -1);
+    ULONGLONG rtPacketPosition = InterlockedCompareExchange64((LONG64 *)&rtPacketInfo[deviceIndex].RtPacketPosition, -1, -1);
     ULONGLONG lastPacketStartQpcPosition = InterlockedCompareExchange64((LONG64 *)&rtPacketInfo[deviceIndex].LastPacketStartQpcPosition, -1, -1);
-    ULONG     bytesPerSecond = (isInput ? m_deviceContext->AudioProperty.InputMeasuredSampleRate : m_deviceContext->AudioProperty.OutputMeasuredSampleRate) * blockAlign;
 
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - bytesPerSample, channels ,bytePerSecond, %u, %u %u", bytesPerSample, rtPacketInfo[deviceIndex].channels, bytesPerSecond);
-
-    if (bytesPerSecond == 0)
-    {
-        if (isInput)
-        {
-            bytesPerSecond = m_inputAvgBytesPerSec;
-        }
-        else
-        {
-            bytesPerSecond = m_outputAvgBytesPerSec;
-        }
-    }
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - bytesPerSample, channels, %u, %u", bytesPerSample, rtPacketInfo[deviceIndex].channels);
 
     RETURN_NTSTATUS_IF_TRUE(blockAlign == 0, STATUS_UNSUCCESSFUL);
 
-    if (lastPacketStartQpcPosition != 0)
+    if (lastPacketStartQpcPosition != 0ULL)
     {
-        *positionInBlocks = (rtPacketPosition + ((qpcPositionNow - lastPacketStartQpcPosition) * bytesPerSecond / HNS_PER_SEC)) / blockAlign;
+        *positionInBlocks = rtPacketPosition / blockAlign;
     }
     else
     {
-        *positionInBlocks = 0;
+        *positionInBlocks = 0ULL;
     }
     *qpcPosition = qpcPositionNow;
 
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - *qpcPosition, *positionInBlocks, rtPacketPosition, bytesPerSecond, blockAlign = %llu, %llu, %llu, %u, %u", *qpcPosition, *positionInBlocks, rtPacketPosition, bytesPerSecond, blockAlign);
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - *qpcPosition, *positionInBlocks, rtPacketPosition, blockAlign = %llu, %llu, %llu, %u", *qpcPosition, *positionInBlocks, rtPacketPosition, blockAlign);
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit");
 
@@ -1144,25 +1083,11 @@ RtPacketObject::AssignDevices(
     if ((m_numOfInputDevices == 0) && (numOfInputDevices != 0))
     {
         m_numOfInputDevices = numOfInputDevices;
-
-        for (ULONG deviceIndex = 0; deviceIndex < m_numOfInputDevices; deviceIndex++)
-        {
-            WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
-            attributes.ParentObject = m_deviceContext->Device;
-            RETURN_NTSTATUS_IF_FAILED(WdfSpinLockCreate(&attributes, &m_inputRtPacketInfo[deviceIndex].PositionSpinLock));
-        }
     }
 
     if ((m_numOfOutputDevices == 0) && (numOfOutputDevices != 0))
     {
         m_numOfOutputDevices = numOfOutputDevices;
-
-        for (ULONG deviceIndex = 0; deviceIndex < m_numOfOutputDevices; deviceIndex++)
-        {
-            WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
-            attributes.ParentObject = m_deviceContext->Device;
-            RETURN_NTSTATUS_IF_FAILED(WdfSpinLockCreate(&attributes, &m_outputRtPacketInfo[deviceIndex].PositionSpinLock));
-        }
     }
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit %!STATUS!", status);

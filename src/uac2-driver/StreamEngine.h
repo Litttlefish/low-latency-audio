@@ -213,6 +213,11 @@ class CStreamEngine
     ACXDATAFORMAT
     GetACXDataFormat();
 
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    ACX_STREAM_STATE
+    GetCurrentState();
+
   protected:
     BOOLEAN          m_input;
     PDEVICE_CONTEXT  m_deviceContext;

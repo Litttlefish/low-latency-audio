@@ -52,22 +52,14 @@ class RtPacketObject
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     NONPAGED_CODE_SEG
-    void SetIsoPacketInfo(
-        _In_ IsoDirection direction,
-        _In_ ULONG        isoPacketSize,
-        _In_ ULONG        numIsoPackets
-    );
-
-    __drv_maxIRQL(PASSIVE_LEVEL)
-    NONPAGED_CODE_SEG
-    void Reset(
+    void ResetInternal(
         _In_ bool  isInput,
         _In_ ULONG deviceIndex
     );
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     NONPAGED_CODE_SEG
-    void Reset(
+    void ResetInternal(
         _In_ bool isInput
     );
 
@@ -178,18 +170,15 @@ class RtPacketObject
   private:
     typedef struct _RT_PACKET_INFO
     {
-        WDFSPINLOCK PositionSpinLock{nullptr};
-        ULONG       IsoPacketSize{0};
-        ULONG       NumIsoPackets{0};
-        PVOID *     RtPackets{nullptr}; // This is retained regardless of Run/Stop.
-        ULONG       RtPacketsCount{0};  // This is retained regardless of Run/Stop.
-        ULONG       RtPacketSize{0};    // This is retained regardless of Run/Stop.
-        ULONGLONG   RtPacketPosition{0ULL};
-        ULONGLONG   RtPacketEstimatedPosition{0ULL};
-        ULONG       RtPacketCurrentPacket{0};
-        ULONGLONG   LastPacketStartQpcPosition{0ULL};
-        ULONG       usbChannel{0}; // stereo 2nd strem will be 2
-        ULONG       channels{0};   // Number of channels in Acx Audio
+        PVOID *   RtPackets{nullptr}; // This is retained regardless of Run/Stop.
+        ULONG     RtPacketsCount{0};  // This is retained regardless of Run/Stop.
+        ULONG     RtPacketSize{0};    // This is retained regardless of Run/Stop.
+        ULONGLONG RtPacketPosition{0ULL};
+        ULONGLONG RtPacketEstimatedPosition{0ULL};
+        ULONG     RtPacketCurrentPacket{0};
+        ULONGLONG LastPacketStartQpcPosition{0ULL};
+        ULONG     usbChannel{0}; // stereo 2nd strem will be 2
+        ULONG     channels{0};   // Number of channels in Acx Audio
     } RT_PACKET_INFO;
 
     const PDEVICE_CONTEXT m_deviceContext;

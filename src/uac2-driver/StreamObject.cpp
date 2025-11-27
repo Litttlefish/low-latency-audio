@@ -30,6 +30,7 @@ Environment:
 #include "USBAudio.h"
 #include "USBAudioConfiguration.h"
 #include "StreamObject.h"
+#include "StreamEngine.h"
 #include "ErrorStatistics.h"
 #include "TransferObject.h"
 #include "RtPacketObject.h"
@@ -1845,9 +1846,10 @@ void StreamObject::MixingEngineThreadMain(
 
                 if (deviceContext->RtPacketObject != nullptr)
                 {
+                    WdfWaitLockAcquire(deviceContext->StreamEngineWaitLock, nullptr);
                     for (ULONG deviceIndex = 0; deviceIndex < deviceContext->NumOfInputDevices; deviceIndex++)
                     {
-                        if (deviceContext->CaptureStreamEngine[deviceIndex] != nullptr)
+                        if ((deviceContext->CaptureStreamEngine[deviceIndex] != nullptr) && (deviceContext->CaptureStreamEngine[deviceIndex]->GetCurrentState() == AcxStreamStateRun))
                         {
                             TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - buffer index %u, transfer object %p", bufIndex, m_inputBuffers[bufIndex].TransferObject);
                             deviceContext->RtPacketObject->CopyToRtPacketFromInputData(
@@ -1862,6 +1864,7 @@ void StreamObject::MixingEngineThreadMain(
                             );
                         }
                     }
+                    WdfWaitLockRelease(deviceContext->StreamEngineWaitLock);
                 }
             }
         }
@@ -1898,9 +1901,10 @@ void StreamObject::MixingEngineThreadMain(
 
                     if (deviceContext->RtPacketObject != nullptr)
                     {
+                        WdfWaitLockAcquire(deviceContext->StreamEngineWaitLock, nullptr);
                         for (ULONG deviceIndex = 0; deviceIndex < deviceContext->NumOfOutputDevices; deviceIndex++)
                         {
-                            if (deviceContext->RenderStreamEngine[deviceIndex] != nullptr)
+                            if ((deviceContext->RenderStreamEngine[deviceIndex] != nullptr) && (deviceContext->RenderStreamEngine[deviceIndex]->GetCurrentState() == AcxStreamStateRun))
                             {
                                 TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - buffer index %u, transfer object %p", bufIndex, m_outputBuffers[bufIndex].TransferObject);
                                 deviceContext->RtPacketObject->CopyFromRtPacketToOutputData(
@@ -1915,6 +1919,7 @@ void StreamObject::MixingEngineThreadMain(
                                 );
                             }
                         }
+                        WdfWaitLockRelease(deviceContext->StreamEngineWaitLock);
                     }
                 }
             }

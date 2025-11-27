@@ -734,6 +734,16 @@ Return Value:
         return status;
     }
 
+    WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
+    attributes.ParentObject = device;
+
+    status = WdfWaitLockCreate(&attributes, &deviceContext->StreamEngineWaitLock);
+    if (!NT_SUCCESS(status))
+    {
+        TraceEvents(TRACE_LEVEL_ERROR, TRACE_DEVICE, "WdfWaitLockCreate failed %!STATUS!", status);
+        return status;
+    }
+
     //
     // AsioWaitLock protects the AsioBufferObject within a narrower scope compared to StreamWaitLock.
     // Locking order: StreamWaitLock is acquired first, then AsioWaitLock.
@@ -3103,11 +3113,10 @@ USBAudioAcxDriverStreamPrepareHardware(
     _IRQL_limited_to_(PASSIVE_LEVEL);
 
     auto prepareHardwareScope = wil::scope_exit([&]() {
-        WdfWaitLockRelease(deviceContext->StreamWaitLock);
+        WdfWaitLockRelease(deviceContext->StreamEngineWaitLock);
     });
 
-    WdfWaitLockAcquire(deviceContext->StreamWaitLock, nullptr);
-
+    WdfWaitLockAcquire(deviceContext->StreamEngineWaitLock, nullptr);
     if (isInput)
     {
         RETURN_NTSTATUS_IF_TRUE(deviceContext->CaptureStreamEngine == nullptr, STATUS_UNSUCCESSFUL);
@@ -3145,10 +3154,10 @@ USBAudioAcxDriverStreamReleaseHardware(
     _IRQL_limited_to_(PASSIVE_LEVEL);
 
     auto releaseHardwareScope = wil::scope_exit([&]() {
-        WdfWaitLockRelease(deviceContext->StreamWaitLock);
+        WdfWaitLockRelease(deviceContext->StreamEngineWaitLock);
     });
 
-    WdfWaitLockAcquire(deviceContext->StreamWaitLock, nullptr);
+    WdfWaitLockAcquire(deviceContext->StreamEngineWaitLock, nullptr);
     if (isInput)
     {
         RETURN_NTSTATUS_IF_TRUE(deviceContext->CaptureStreamEngine == nullptr, STATUS_UNSUCCESSFUL);
@@ -3389,7 +3398,7 @@ USBAudioAcxDriverStreamRun(
     {
         if (deviceContext->RtPacketObject != nullptr)
         {
-            deviceContext->RtPacketObject->ResetCurrentPacket(isInput, deviceIndex);
+            deviceContext->RtPacketObject->ResetInternal(isInput, deviceIndex);
         }
         status = STATUS_SUCCESS;
     }
@@ -3494,6 +3503,34 @@ USBAudioAcxDriverStreamResetCurrentPacket(
     status = deviceContext->RtPacketObject->ResetCurrentPacket(isInput, deviceIndex);
 
 USBAudioAcxDriverStreamResetCurrentPacket_Exit:
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
+
+    return status;
+}
+
+PAGED_CODE_SEG
+_Use_decl_annotations_
+NTSTATUS
+USBAudioAcxDriverStreamResetInternal(
+    bool            isInput,
+    ULONG           deviceIndex,
+    PDEVICE_CONTEXT deviceContext
+)
+{
+    NTSTATUS status = STATUS_SUCCESS;
+
+    PAGED_CODE();
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
+
+    _IRQL_limited_to_(PASSIVE_LEVEL);
+
+    IF_TRUE_ACTION_JUMP(deviceContext == nullptr, status = STATUS_INVALID_PARAMETER, USBAudioAcxDriverStreamResetInternal_Exit);
+    IF_TRUE_ACTION_JUMP(deviceContext->RtPacketObject == nullptr, status = STATUS_INVALID_PARAMETER, USBAudioAcxDriverStreamResetInternal_Exit);
+
+    deviceContext->RtPacketObject->ResetInternal(isInput, deviceIndex);
+
+USBAudioAcxDriverStreamResetInternal_Exit:
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
 
@@ -5334,8 +5371,8 @@ NTSTATUS StartIsoStream(
 
     if (deviceContext->RtPacketObject != nullptr)
     {
-        deviceContext->RtPacketObject->Reset(TRUE);
-        deviceContext->RtPacketObject->Reset(FALSE);
+        deviceContext->RtPacketObject->ResetInternal(true);
+        deviceContext->RtPacketObject->ResetInternal(false);
     }
 
     deviceContext->StreamObject->SetStartIsoFrame(GetCurrentFrame(deviceContext), deviceContext->Params.OutputFrameDelay);
@@ -5487,18 +5524,10 @@ NTSTATUS StartTransfer(
     switch (direction)
     {
     case IsoDirection::In:
-        if (index == 0)
-        {
-            deviceContext->RtPacketObject->SetIsoPacketInfo(direction, isoPacketSize, numIsoPackets);
-        }
         status = InitializeIsoUrbIn(deviceContext, streamObject, transferObject, numIsoPackets);
         RETURN_NTSTATUS_IF_FAILED_MSG(status, "InitializeIsoUrbIn failed");
         break;
     case IsoDirection::Out:
-        if (index == 0)
-        {
-            deviceContext->RtPacketObject->SetIsoPacketInfo(direction, isoPacketSize, numIsoPackets);
-        }
         status = InitializeIsoUrbOut(deviceContext, streamObject, transferObject, numIsoPackets);
         RETURN_NTSTATUS_IF_FAILED_MSG(status, "InitializeIsoUrbOut failed");
 
