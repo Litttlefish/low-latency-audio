@@ -98,7 +98,7 @@ class AsioBufferObject
 
     __drv_maxIRQL(DISPATCH_LEVEL)
     NONPAGED_CODE_SEG
-    void
+    bool
     SetRecDeviceStatus(
         _In_ DeviceStatuses DeviceStatuses
     );
@@ -124,9 +124,19 @@ class AsioBufferObject
     PAGED_CODE_SEG
     void SetReady();
 
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    void SendNotificationToAsio();
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    void UpdateCurrentSampleRate();
+
     static __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    AsioBufferObject * Create(_In_ PDEVICE_CONTEXT deviceContext);
+    AsioBufferObject * Create(
+        _In_ PDEVICE_CONTEXT deviceContext
+    );
 
   protected:
     __drv_maxIRQL(PASSIVE_LEVEL)

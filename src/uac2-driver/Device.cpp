@@ -2523,6 +2523,7 @@ ActivateAudioInterface(
     NTSTATUS                      status = STATUS_SUCCESS;
     PUAC_AUDIO_PROPERTY           audioProp = &deviceContext->AudioProperty;
     PUSB_CONFIGURATION_DESCRIPTOR configDescriptor = deviceContext->UsbConfigurationDescriptor;
+    ULONG                         previousSampleRate = audioProp->SampleRate;
 
     PAGED_CODE();
 
@@ -2569,6 +2570,33 @@ ActivateAudioInterface(
 
     if (deviceContext->UsbAudioConfiguration->hasInputIsochronousInterface() || deviceContext->UsbAudioConfiguration->hasOutputIsochronousInterface())
     {
+        bool notify = false;
+        if (previousSampleRate != audioProp->SampleRate)
+        {
+            WdfWaitLockAcquire(deviceContext->AsioWaitLock, nullptr);
+            if (deviceContext->AsioBufferObject != nullptr)
+            {
+                deviceContext->AsioBufferObject->UpdateCurrentSampleRate();
+                notify |= deviceContext->AsioBufferObject->SetRecDeviceStatus(DeviceStatuses::SampleRateChanged);
+            }
+            WdfWaitLockRelease(deviceContext->AsioWaitLock);
+        }
+
+        //
+        // If clock source changes are implemented, include a check for state changes here.
+        // When a change occurs, set `notify` to true.
+        //
+
+        if (notify)
+        {
+            WdfWaitLockAcquire(deviceContext->AsioWaitLock, nullptr);
+            if (deviceContext->AsioBufferObject != nullptr)
+            {
+                deviceContext->AsioBufferObject->SetRecDeviceStatus(DeviceStatuses::ResetRequired);
+                deviceContext->AsioBufferObject->SendNotificationToAsio();
+            }
+            WdfWaitLockRelease(deviceContext->AsioWaitLock);
+        }
         status = STATUS_SUCCESS;
     }
     else

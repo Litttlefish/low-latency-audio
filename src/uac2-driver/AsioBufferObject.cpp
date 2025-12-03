@@ -799,11 +799,17 @@ CopyToAsioFromInputData_Exit:
 
 _Use_decl_annotations_
 NONPAGED_CODE_SEG
-void AsioBufferObject::SetRecDeviceStatus(
+bool AsioBufferObject::SetRecDeviceStatus(
     DeviceStatuses statuses
 )
 {
-    InterlockedOr((PLONG)&m_recHeader->DeviceStatus, toInt(statuses));
+    bool asioNotify = false;
+    if (m_recHeader != nullptr)
+    {
+        InterlockedOr((PLONG)&m_recHeader->DeviceStatus, toInt(statuses));
+        asioNotify = true;
+    }
+    return asioNotify;
 }
 
 _Use_decl_annotations_
@@ -882,4 +888,28 @@ void AsioBufferObject::SetReady()
     PAGED_CODE();
 
     m_isReady = true;
+}
+
+_Use_decl_annotations_
+PAGED_CODE_SEG
+void AsioBufferObject::SendNotificationToAsio()
+{
+    PAGED_CODE();
+
+    if (m_userNotificationEvent != nullptr)
+    {
+        KeSetEvent(m_userNotificationEvent, IO_SOUND_INCREMENT, false);
+    }
+}
+
+_Use_decl_annotations_
+PAGED_CODE_SEG
+void AsioBufferObject::UpdateCurrentSampleRate()
+{
+    PAGED_CODE();
+
+    if (m_recHeader != nullptr)
+    {
+        m_recHeader->CurrentSampleRate = m_deviceContext->AudioProperty.SampleRate;
+    }
 }
