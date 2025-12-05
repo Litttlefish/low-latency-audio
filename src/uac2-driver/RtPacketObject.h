@@ -63,6 +63,17 @@ class RtPacketObject
         _In_ bool isInput
     );
 
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    NONPAGED_CODE_SEG
+    void Pause();
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    NONPAGED_CODE_SEG
+    void Resume(
+        _In_ bool  isInput,
+        _In_ ULONG deviceIndex
+    );
+
     __drv_maxIRQL(DISPATCH_LEVEL)
     NONPAGED_CODE_SEG
     void FeedOutputWriteBytes(
@@ -177,8 +188,9 @@ class RtPacketObject
         ULONGLONG RtPacketEstimatedPosition{0ULL};
         ULONG     RtPacketCurrentPacket{0};
         ULONGLONG LastPacketStartQpcPosition{0ULL};
-        ULONG     usbChannel{0}; // stereo 2nd strem will be 2
-        ULONG     channels{0};   // Number of channels in Acx Audio
+        ULONG     UsbChannel{0}; // stereo 2nd strem will be 2
+        ULONG     Channels{0};   // Number of channels in Acx Audio
+        bool      Pause{false};
     } RT_PACKET_INFO;
 
     const PDEVICE_CONTEXT m_deviceContext;

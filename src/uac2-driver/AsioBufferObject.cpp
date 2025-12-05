@@ -94,7 +94,7 @@ AsioBufferObject::LockAndGetSystemAddress(
     isLocked = false;
     systemAddress = nullptr;
 
-    auto setBufferScope = wil::scope_exit([&]() {
+    auto lockAndGetSystemAddressScope = wil::scope_exit([&]() {
         if (!NT_SUCCESS(status) && (status != STATUS_DEVICE_BUSY))
         {
             if (isLocked)

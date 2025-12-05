@@ -3237,6 +3237,11 @@ USBAudioAcxDriverStreamSetDataFormat(
         ACXDATAFORMAT inputDataFormatAfterChange = nullptr;
         ACXDATAFORMAT outputDataFormatAfterChange = nullptr;
         ULONG         formatType, format;
+        bool          streamRunning = false;
+        ULONG         desiredBytesPerSampleIn = deviceContext->AudioProperty.InputBytesPerSample;
+        ULONG         desiredValidBitsPerSampleIn = deviceContext->AudioProperty.InputValidBitsPerSample;
+        ULONG         desiredBytesPerSampleOut = deviceContext->AudioProperty.OutputBytesPerSample;
+        ULONG         desiredValidBitsPerSampleOut = deviceContext->AudioProperty.OutputValidBitsPerSample;
 
         status = USBAudioAcxDriverGetCurrentDataFormat(deviceContext, true, inputDataFormatBeforeChange);
         IF_FAILED_JUMP(status, Exit_BeforeWaitLockRelease);
@@ -3249,25 +3254,77 @@ USBAudioAcxDriverStreamSetDataFormat(
 
         if (isInput)
         {
-            ULONG desiredBytesPerSampleOut = deviceContext->AudioProperty.OutputBytesPerSample;
-            ULONG desiredValidBitsPerSampleOut = deviceContext->AudioProperty.OutputValidBitsPerSample;
+            desiredBytesPerSampleIn = AcxDataFormatGetBitsPerSample(dataFormat) / 8;
+            desiredValidBitsPerSampleIn = AcxDataFormatGetValidBitsPerSample(dataFormat);
 
             status = deviceContext->UsbAudioConfiguration->GetNearestSupportedValidBitsPerSamples(isInput, formatType, format, desiredBytesPerSampleOut, desiredValidBitsPerSampleOut);
             IF_FAILED_JUMP(status, Exit_BeforeWaitLockRelease);
-
-            status = ActivateAudioInterface(deviceContext, AcxDataFormatGetSampleRate(dataFormat), formatType, format, AcxDataFormatGetBitsPerSample(dataFormat) / 8, AcxDataFormatGetValidBitsPerSample(dataFormat), desiredBytesPerSampleOut, desiredValidBitsPerSampleOut);
         }
         else
         {
-            ULONG desiredBytesPerSampleIn = deviceContext->AudioProperty.InputBytesPerSample;
-            ULONG desiredValidBitsPerSampleIn = deviceContext->AudioProperty.InputValidBitsPerSample;
+            desiredBytesPerSampleOut = AcxDataFormatGetBitsPerSample(dataFormat) / 8;
+            desiredValidBitsPerSampleOut = AcxDataFormatGetValidBitsPerSample(dataFormat);
 
             status = deviceContext->UsbAudioConfiguration->GetNearestSupportedValidBitsPerSamples(isInput, formatType, format, desiredBytesPerSampleIn, desiredValidBitsPerSampleIn);
             IF_FAILED_JUMP(status, Exit_BeforeWaitLockRelease);
-
-            status = ActivateAudioInterface(deviceContext, AcxDataFormatGetSampleRate(dataFormat), formatType, format, desiredBytesPerSampleIn, desiredValidBitsPerSampleIn, AcxDataFormatGetBitsPerSample(dataFormat) / 8, AcxDataFormatGetValidBitsPerSample(dataFormat));
         }
+
+        if (deviceContext->UsbAudioConfiguration->hasInputIsochronousInterface() && deviceContext->UsbAudioConfiguration->hasOutputIsochronousInterface())
+        {
+            IF_TRUE_JUMP((deviceContext->AudioProperty.SampleRate == AcxDataFormatGetSampleRate(dataFormat)) &&
+						 (deviceContext->AudioProperty.InputFormatType == formatType) &&
+						 (deviceContext->AudioProperty.InputFormat == format) &&
+						 (deviceContext->AudioProperty.InputBytesPerSample == desiredBytesPerSampleIn) &&
+						 (deviceContext->AudioProperty.InputValidBitsPerSample == desiredValidBitsPerSampleIn) &&
+						 (deviceContext->AudioProperty.OutputFormatType == formatType) &&
+						 (deviceContext->AudioProperty.OutputFormat == format) &&
+						 (deviceContext->AudioProperty.OutputBytesPerSample == desiredBytesPerSampleOut) &&
+						 (deviceContext->AudioProperty.OutputValidBitsPerSample == desiredValidBitsPerSampleOut), Exit_BeforeWaitLockRelease);
+        }
+        else if (deviceContext->UsbAudioConfiguration->hasInputIsochronousInterface())
+        {
+            IF_TRUE_JUMP((deviceContext->AudioProperty.SampleRate == AcxDataFormatGetSampleRate(dataFormat)) &&
+						 (deviceContext->AudioProperty.InputFormatType == formatType) &&
+						 (deviceContext->AudioProperty.InputFormat == format) &&
+						 (deviceContext->AudioProperty.InputBytesPerSample == desiredBytesPerSampleIn) &&
+						 (deviceContext->AudioProperty.InputValidBitsPerSample == desiredValidBitsPerSampleIn), Exit_BeforeWaitLockRelease);
+        }
+        else if (deviceContext->UsbAudioConfiguration->hasOutputIsochronousInterface())
+        {
+            IF_TRUE_JUMP((deviceContext->AudioProperty.SampleRate == AcxDataFormatGetSampleRate(dataFormat)) &&
+						 (deviceContext->AudioProperty.OutputFormatType == formatType) &&
+						 (deviceContext->AudioProperty.OutputFormat == format) &&
+						 (deviceContext->AudioProperty.OutputBytesPerSample == desiredBytesPerSampleOut) &&
+						 (deviceContext->AudioProperty.OutputValidBitsPerSample == desiredValidBitsPerSampleOut), Exit_BeforeWaitLockRelease);
+        }
+
+        if (deviceContext->StreamObject != nullptr)
+        {
+            WdfWaitLockAcquire(deviceContext->AsioWaitLock, nullptr);
+            if (deviceContext->AsioBufferObject == nullptr)
+            {
+                streamRunning = true;
+            }
+            WdfWaitLockRelease(deviceContext->AsioWaitLock);
+            if ((deviceContext->StartCounterAsio != 0) || (deviceContext->StartCounterWdmAudio != 0))
+            {
+                StopIsoStream(deviceContext);
+            }
+        }
+        if (deviceContext->RtPacketObject != nullptr)
+        {
+            deviceContext->RtPacketObject->Pause();
+        }
+        status = ActivateAudioInterface(deviceContext, AcxDataFormatGetSampleRate(dataFormat), formatType, format, desiredBytesPerSampleIn, desiredValidBitsPerSampleIn, desiredBytesPerSampleOut, desiredValidBitsPerSampleOut);
         IF_FAILED_JUMP(status, Exit_BeforeWaitLockRelease);
+
+        if (streamRunning && NT_SUCCESS(status))
+        {
+            if ((deviceContext->StartCounterAsio != 0) || (deviceContext->StartCounterWdmAudio != 0))
+            {
+                StartIsoStream(deviceContext);
+            }
+        }
 
         status = USBAudioAcxDriverGetCurrentDataFormat(deviceContext, true, inputDataFormatAfterChange);
         IF_FAILED_JUMP(status, Exit_BeforeWaitLockRelease);
@@ -3432,6 +3489,10 @@ USBAudioAcxDriverStreamRun(
     }
     if (NT_SUCCESS(status))
     {
+        if (deviceContext->RtPacketObject != nullptr)
+        {
+            deviceContext->RtPacketObject->Resume(isInput, deviceIndex);
+        }
         InterlockedIncrement(&deviceContext->StartCounterWdmAudio);
         TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_MULTICLIENT, " - start counter asio %ld, start counter acx audio %ld, start counter iso stream %ld", deviceContext->StartCounterAsio, deviceContext->StartCounterWdmAudio, deviceContext->StartCounterIsoStream);
     }
@@ -5858,7 +5919,6 @@ NTSTATUS StopIsoStream(
         deviceContext->StreamObject->Cleanup();
         delete deviceContext->StreamObject;
         deviceContext->StreamObject = nullptr;
-
         if (deviceContext->AudioProperty.OutputInterfaceNumber != 0)
         {
             SelectAlternateInterface(IsoDirection::Out, deviceContext, deviceContext->AudioProperty.OutputInterfaceNumber, 0);
@@ -5871,6 +5931,10 @@ NTSTATUS StopIsoStream(
         {
             WdfDeviceResumeIdle(deviceContext->Device);
         }
+    }
+    if (deviceContext->ContiguousMemory != nullptr)
+    {
+        deviceContext->ContiguousMemory->Clear();
     }
 
     if (deviceContext->ErrorStatistics != nullptr)
