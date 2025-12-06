@@ -734,6 +734,31 @@ Return Value:
         return status;
     }
 
+    WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
+    attributes.ParentObject = device;
+
+    status = WdfWaitLockCreate(&attributes, &deviceContext->StreamEngineWaitLock);
+    if (!NT_SUCCESS(status))
+    {
+        TraceEvents(TRACE_LEVEL_ERROR, TRACE_DEVICE, "WdfWaitLockCreate failed %!STATUS!", status);
+        return status;
+    }
+
+    //
+    // AsioWaitLock protects the AsioBufferObject within a narrower scope compared to StreamWaitLock.
+    // Locking order: StreamWaitLock is acquired first, then AsioWaitLock.
+    // This design ensures proper synchronization and avoids deadlocks.
+    //
+    WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
+    attributes.ParentObject = device;
+
+    status = WdfWaitLockCreate(&attributes, &deviceContext->AsioWaitLock);
+    if (!NT_SUCCESS(status))
+    {
+        TraceEvents(TRACE_LEVEL_ERROR, TRACE_DEVICE, "WdfWaitLockCreate failed %!STATUS!", status);
+        return status;
+    }
+
     status = ReadAndSelectDescriptors(device);
     if (!NT_SUCCESS(status))
     {
@@ -1183,10 +1208,12 @@ USBAudioAcxDriverEvtDeviceD0Exit(
     WdfWaitLockAcquire(deviceContext->StreamWaitLock, nullptr);
     if ((deviceContext->StartCounterAsio != 0) || (deviceContext->StartCounterWdmAudio != 0))
     {
+        WdfWaitLockAcquire(deviceContext->AsioWaitLock, nullptr);
         if (deviceContext->AsioBufferObject != nullptr)
         {
             deviceContext->AsioBufferObject->Clear();
         }
+        WdfWaitLockRelease(deviceContext->AsioWaitLock);
         if (deviceContext->ContiguousMemory != nullptr)
         {
             deviceContext->ContiguousMemory->Clear();
@@ -2496,6 +2523,7 @@ ActivateAudioInterface(
     NTSTATUS                      status = STATUS_SUCCESS;
     PUAC_AUDIO_PROPERTY           audioProp = &deviceContext->AudioProperty;
     PUSB_CONFIGURATION_DESCRIPTOR configDescriptor = deviceContext->UsbConfigurationDescriptor;
+    ULONG                         previousSampleRate = audioProp->SampleRate;
 
     PAGED_CODE();
 
@@ -2542,6 +2570,33 @@ ActivateAudioInterface(
 
     if (deviceContext->UsbAudioConfiguration->hasInputIsochronousInterface() || deviceContext->UsbAudioConfiguration->hasOutputIsochronousInterface())
     {
+        bool notify = false;
+        if (previousSampleRate != audioProp->SampleRate)
+        {
+            WdfWaitLockAcquire(deviceContext->AsioWaitLock, nullptr);
+            if (deviceContext->AsioBufferObject != nullptr)
+            {
+                deviceContext->AsioBufferObject->UpdateCurrentSampleRate();
+                notify |= deviceContext->AsioBufferObject->SetRecDeviceStatus(DeviceStatuses::SampleRateChanged);
+            }
+            WdfWaitLockRelease(deviceContext->AsioWaitLock);
+        }
+
+        //
+        // If clock source changes are implemented, include a check for state changes here.
+        // When a change occurs, set `notify` to true.
+        //
+
+        if (notify)
+        {
+            WdfWaitLockAcquire(deviceContext->AsioWaitLock, nullptr);
+            if (deviceContext->AsioBufferObject != nullptr)
+            {
+                deviceContext->AsioBufferObject->SetRecDeviceStatus(DeviceStatuses::ResetRequired);
+                deviceContext->AsioBufferObject->SendNotificationToAsio();
+            }
+            WdfWaitLockRelease(deviceContext->AsioWaitLock);
+        }
         status = STATUS_SUCCESS;
     }
     else
@@ -3086,11 +3141,10 @@ USBAudioAcxDriverStreamPrepareHardware(
     _IRQL_limited_to_(PASSIVE_LEVEL);
 
     auto prepareHardwareScope = wil::scope_exit([&]() {
-        WdfWaitLockRelease(deviceContext->StreamWaitLock);
+        WdfWaitLockRelease(deviceContext->StreamEngineWaitLock);
     });
 
-    WdfWaitLockAcquire(deviceContext->StreamWaitLock, nullptr);
-
+    WdfWaitLockAcquire(deviceContext->StreamEngineWaitLock, nullptr);
     if (isInput)
     {
         RETURN_NTSTATUS_IF_TRUE(deviceContext->CaptureStreamEngine == nullptr, STATUS_UNSUCCESSFUL);
@@ -3128,10 +3182,10 @@ USBAudioAcxDriverStreamReleaseHardware(
     _IRQL_limited_to_(PASSIVE_LEVEL);
 
     auto releaseHardwareScope = wil::scope_exit([&]() {
-        WdfWaitLockRelease(deviceContext->StreamWaitLock);
+        WdfWaitLockRelease(deviceContext->StreamEngineWaitLock);
     });
 
-    WdfWaitLockAcquire(deviceContext->StreamWaitLock, nullptr);
+    WdfWaitLockAcquire(deviceContext->StreamEngineWaitLock, nullptr);
     if (isInput)
     {
         RETURN_NTSTATUS_IF_TRUE(deviceContext->CaptureStreamEngine == nullptr, STATUS_UNSUCCESSFUL);
@@ -3183,6 +3237,11 @@ USBAudioAcxDriverStreamSetDataFormat(
         ACXDATAFORMAT inputDataFormatAfterChange = nullptr;
         ACXDATAFORMAT outputDataFormatAfterChange = nullptr;
         ULONG         formatType, format;
+        bool          streamRunning = false;
+        ULONG         desiredBytesPerSampleIn = deviceContext->AudioProperty.InputBytesPerSample;
+        ULONG         desiredValidBitsPerSampleIn = deviceContext->AudioProperty.InputValidBitsPerSample;
+        ULONG         desiredBytesPerSampleOut = deviceContext->AudioProperty.OutputBytesPerSample;
+        ULONG         desiredValidBitsPerSampleOut = deviceContext->AudioProperty.OutputValidBitsPerSample;
 
         status = USBAudioAcxDriverGetCurrentDataFormat(deviceContext, true, inputDataFormatBeforeChange);
         IF_FAILED_JUMP(status, Exit_BeforeWaitLockRelease);
@@ -3195,25 +3254,77 @@ USBAudioAcxDriverStreamSetDataFormat(
 
         if (isInput)
         {
-            ULONG desiredBytesPerSampleOut = deviceContext->AudioProperty.OutputBytesPerSample;
-            ULONG desiredValidBitsPerSampleOut = deviceContext->AudioProperty.OutputValidBitsPerSample;
+            desiredBytesPerSampleIn = AcxDataFormatGetBitsPerSample(dataFormat) / 8;
+            desiredValidBitsPerSampleIn = AcxDataFormatGetValidBitsPerSample(dataFormat);
 
             status = deviceContext->UsbAudioConfiguration->GetNearestSupportedValidBitsPerSamples(isInput, formatType, format, desiredBytesPerSampleOut, desiredValidBitsPerSampleOut);
             IF_FAILED_JUMP(status, Exit_BeforeWaitLockRelease);
-
-            status = ActivateAudioInterface(deviceContext, AcxDataFormatGetSampleRate(dataFormat), formatType, format, AcxDataFormatGetBitsPerSample(dataFormat) / 8, AcxDataFormatGetValidBitsPerSample(dataFormat), desiredBytesPerSampleOut, desiredValidBitsPerSampleOut);
         }
         else
         {
-            ULONG desiredBytesPerSampleIn = deviceContext->AudioProperty.InputBytesPerSample;
-            ULONG desiredValidBitsPerSampleIn = deviceContext->AudioProperty.InputValidBitsPerSample;
+            desiredBytesPerSampleOut = AcxDataFormatGetBitsPerSample(dataFormat) / 8;
+            desiredValidBitsPerSampleOut = AcxDataFormatGetValidBitsPerSample(dataFormat);
 
             status = deviceContext->UsbAudioConfiguration->GetNearestSupportedValidBitsPerSamples(isInput, formatType, format, desiredBytesPerSampleIn, desiredValidBitsPerSampleIn);
             IF_FAILED_JUMP(status, Exit_BeforeWaitLockRelease);
-
-            status = ActivateAudioInterface(deviceContext, AcxDataFormatGetSampleRate(dataFormat), formatType, format, desiredBytesPerSampleIn, desiredValidBitsPerSampleIn, AcxDataFormatGetBitsPerSample(dataFormat) / 8, AcxDataFormatGetValidBitsPerSample(dataFormat));
         }
+
+        if (deviceContext->UsbAudioConfiguration->hasInputIsochronousInterface() && deviceContext->UsbAudioConfiguration->hasOutputIsochronousInterface())
+        {
+            IF_TRUE_JUMP((deviceContext->AudioProperty.SampleRate == AcxDataFormatGetSampleRate(dataFormat)) &&
+						 (deviceContext->AudioProperty.InputFormatType == formatType) &&
+						 (deviceContext->AudioProperty.InputFormat == format) &&
+						 (deviceContext->AudioProperty.InputBytesPerSample == desiredBytesPerSampleIn) &&
+						 (deviceContext->AudioProperty.InputValidBitsPerSample == desiredValidBitsPerSampleIn) &&
+						 (deviceContext->AudioProperty.OutputFormatType == formatType) &&
+						 (deviceContext->AudioProperty.OutputFormat == format) &&
+						 (deviceContext->AudioProperty.OutputBytesPerSample == desiredBytesPerSampleOut) &&
+						 (deviceContext->AudioProperty.OutputValidBitsPerSample == desiredValidBitsPerSampleOut), Exit_BeforeWaitLockRelease);
+        }
+        else if (deviceContext->UsbAudioConfiguration->hasInputIsochronousInterface())
+        {
+            IF_TRUE_JUMP((deviceContext->AudioProperty.SampleRate == AcxDataFormatGetSampleRate(dataFormat)) &&
+						 (deviceContext->AudioProperty.InputFormatType == formatType) &&
+						 (deviceContext->AudioProperty.InputFormat == format) &&
+						 (deviceContext->AudioProperty.InputBytesPerSample == desiredBytesPerSampleIn) &&
+						 (deviceContext->AudioProperty.InputValidBitsPerSample == desiredValidBitsPerSampleIn), Exit_BeforeWaitLockRelease);
+        }
+        else if (deviceContext->UsbAudioConfiguration->hasOutputIsochronousInterface())
+        {
+            IF_TRUE_JUMP((deviceContext->AudioProperty.SampleRate == AcxDataFormatGetSampleRate(dataFormat)) &&
+						 (deviceContext->AudioProperty.OutputFormatType == formatType) &&
+						 (deviceContext->AudioProperty.OutputFormat == format) &&
+						 (deviceContext->AudioProperty.OutputBytesPerSample == desiredBytesPerSampleOut) &&
+						 (deviceContext->AudioProperty.OutputValidBitsPerSample == desiredValidBitsPerSampleOut), Exit_BeforeWaitLockRelease);
+        }
+
+        if (deviceContext->StreamObject != nullptr)
+        {
+            WdfWaitLockAcquire(deviceContext->AsioWaitLock, nullptr);
+            if (deviceContext->AsioBufferObject == nullptr)
+            {
+                streamRunning = true;
+            }
+            WdfWaitLockRelease(deviceContext->AsioWaitLock);
+            if ((deviceContext->StartCounterAsio != 0) || (deviceContext->StartCounterWdmAudio != 0))
+            {
+                StopIsoStream(deviceContext);
+            }
+        }
+        if (deviceContext->RtPacketObject != nullptr)
+        {
+            deviceContext->RtPacketObject->Pause();
+        }
+        status = ActivateAudioInterface(deviceContext, AcxDataFormatGetSampleRate(dataFormat), formatType, format, desiredBytesPerSampleIn, desiredValidBitsPerSampleIn, desiredBytesPerSampleOut, desiredValidBitsPerSampleOut);
         IF_FAILED_JUMP(status, Exit_BeforeWaitLockRelease);
+
+        if (streamRunning && NT_SUCCESS(status))
+        {
+            if ((deviceContext->StartCounterAsio != 0) || (deviceContext->StartCounterWdmAudio != 0))
+            {
+                StartIsoStream(deviceContext);
+            }
+        }
 
         status = USBAudioAcxDriverGetCurrentDataFormat(deviceContext, true, inputDataFormatAfterChange);
         IF_FAILED_JUMP(status, Exit_BeforeWaitLockRelease);
@@ -3372,12 +3483,16 @@ USBAudioAcxDriverStreamRun(
     {
         if (deviceContext->RtPacketObject != nullptr)
         {
-            deviceContext->RtPacketObject->ResetCurrentPacket(isInput, deviceIndex);
+            deviceContext->RtPacketObject->ResetInternal(isInput, deviceIndex);
         }
         status = STATUS_SUCCESS;
     }
     if (NT_SUCCESS(status))
     {
+        if (deviceContext->RtPacketObject != nullptr)
+        {
+            deviceContext->RtPacketObject->Resume(isInput, deviceIndex);
+        }
         InterlockedIncrement(&deviceContext->StartCounterWdmAudio);
         TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_MULTICLIENT, " - start counter asio %ld, start counter acx audio %ld, start counter iso stream %ld", deviceContext->StartCounterAsio, deviceContext->StartCounterWdmAudio, deviceContext->StartCounterIsoStream);
     }
@@ -3477,6 +3592,34 @@ USBAudioAcxDriverStreamResetCurrentPacket(
     status = deviceContext->RtPacketObject->ResetCurrentPacket(isInput, deviceIndex);
 
 USBAudioAcxDriverStreamResetCurrentPacket_Exit:
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
+
+    return status;
+}
+
+PAGED_CODE_SEG
+_Use_decl_annotations_
+NTSTATUS
+USBAudioAcxDriverStreamResetInternal(
+    bool            isInput,
+    ULONG           deviceIndex,
+    PDEVICE_CONTEXT deviceContext
+)
+{
+    NTSTATUS status = STATUS_SUCCESS;
+
+    PAGED_CODE();
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
+
+    _IRQL_limited_to_(PASSIVE_LEVEL);
+
+    IF_TRUE_ACTION_JUMP(deviceContext == nullptr, status = STATUS_INVALID_PARAMETER, USBAudioAcxDriverStreamResetInternal_Exit);
+    IF_TRUE_ACTION_JUMP(deviceContext->RtPacketObject == nullptr, status = STATUS_INVALID_PARAMETER, USBAudioAcxDriverStreamResetInternal_Exit);
+
+    deviceContext->RtPacketObject->ResetInternal(isInput, deviceIndex);
+
+USBAudioAcxDriverStreamResetInternal_Exit:
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
 
@@ -4345,10 +4488,12 @@ VOID EvtUSBAudioAcxDriverChangeSampleRate(
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_MULTICLIENT, " - start counter asio %ld, start counter acx audio %ld, start counter iso stream %ld", deviceContext->StartCounterAsio, deviceContext->StartCounterWdmAudio, deviceContext->StartCounterIsoStream);
     if (deviceContext->StreamObject != nullptr)
     {
+        WdfWaitLockAcquire(deviceContext->AsioWaitLock, nullptr);
         if (deviceContext->AsioBufferObject == nullptr)
         {
             streamRunning = true;
         }
+        WdfWaitLockRelease(deviceContext->AsioWaitLock);
         if ((deviceContext->StartCounterAsio != 0) || (deviceContext->StartCounterWdmAudio != 0))
         {
             StopIsoStream(deviceContext);
@@ -4634,6 +4779,7 @@ VOID EvtUSBAudioAcxDriverStartAsioStream(
         }
         else
         {
+            WdfWaitLockAcquire(deviceContext->AsioWaitLock, nullptr);
             if (deviceContext->AsioBufferObject != nullptr)
             {
                 deviceContext->AsioBufferObject->SetReady();
@@ -4643,6 +4789,7 @@ VOID EvtUSBAudioAcxDriverStartAsioStream(
             {
                 status = STATUS_UNSUCCESSFUL;
             }
+            WdfWaitLockRelease(deviceContext->AsioWaitLock);
         }
         if (NT_SUCCESS(status))
         {
@@ -4760,7 +4907,7 @@ VOID EvtUSBAudioAcxDriverSetAsioBuffer(
     ASSERT(params.Parameters.Property.Value != nullptr);
     ASSERT(params.Parameters.Property.ValueCb >= sizeof(UAC_ASIO_REC_BUFFER_HEADER));
 
-    WdfWaitLockAcquire(deviceContext->StreamWaitLock, nullptr);
+    WdfWaitLockAcquire(deviceContext->AsioWaitLock, nullptr);
 
     IF_TRUE_ACTION_JUMP(((params.Parameters.Property.Control == nullptr) ||
                          (params.Parameters.Property.ControlCb < sizeof(UAC_ASIO_PLAY_BUFFER_HEADER)) ||
@@ -4800,7 +4947,7 @@ VOID EvtUSBAudioAcxDriverSetAsioBuffer(
         sizeof(KSPROPERTY)
     );
 Exit:
-    WdfWaitLockRelease(deviceContext->StreamWaitLock);
+    WdfWaitLockRelease(deviceContext->AsioWaitLock);
 
     WdfRequestCompleteWithInformation(request, status, outDataCb);
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
@@ -4838,7 +4985,7 @@ VOID EvtUSBAudioAcxDriverUnsetAsioBuffer(
     ASSERT(params.Parameters.Property.Value == nullptr);
     ASSERT(params.Parameters.Property.ValueCb == 0);
 
-    WdfWaitLockAcquire(deviceContext->StreamWaitLock, nullptr);
+    WdfWaitLockAcquire(deviceContext->AsioWaitLock, nullptr);
 
     IF_TRUE_ACTION_JUMP(((params.Parameters.Property.Control != nullptr) ||
                          (params.Parameters.Property.ControlCb != 0) ||
@@ -4859,7 +5006,7 @@ VOID EvtUSBAudioAcxDriverUnsetAsioBuffer(
         status = STATUS_SUCCESS;
     }
 Exit:
-    WdfWaitLockRelease(deviceContext->StreamWaitLock);
+    WdfWaitLockRelease(deviceContext->AsioWaitLock);
 
     WdfRequestCompleteWithInformation(request, status, outDataCb);
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
@@ -5205,10 +5352,12 @@ NTSTATUS StartIsoStream(
         else
         {
             InterlockedIncrement(&deviceContext->StartCounterIsoStream);
+            WdfWaitLockAcquire(deviceContext->AsioWaitLock, nullptr);
             if (deviceContext->AsioBufferObject != nullptr)
             {
                 deviceContext->AsioBufferObject->SetReady();
             }
+            WdfWaitLockRelease(deviceContext->AsioWaitLock);
         }
 
         if (deviceContext->StreamObject != nullptr)
@@ -5311,8 +5460,8 @@ NTSTATUS StartIsoStream(
 
     if (deviceContext->RtPacketObject != nullptr)
     {
-        deviceContext->RtPacketObject->Reset(TRUE);
-        deviceContext->RtPacketObject->Reset(FALSE);
+        deviceContext->RtPacketObject->ResetInternal(true);
+        deviceContext->RtPacketObject->ResetInternal(false);
     }
 
     deviceContext->StreamObject->SetStartIsoFrame(GetCurrentFrame(deviceContext), deviceContext->Params.OutputFrameDelay);
@@ -5464,18 +5613,10 @@ NTSTATUS StartTransfer(
     switch (direction)
     {
     case IsoDirection::In:
-        if (index == 0)
-        {
-            deviceContext->RtPacketObject->SetIsoPacketInfo(direction, isoPacketSize, numIsoPackets);
-        }
         status = InitializeIsoUrbIn(deviceContext, streamObject, transferObject, numIsoPackets);
         RETURN_NTSTATUS_IF_FAILED_MSG(status, "InitializeIsoUrbIn failed");
         break;
     case IsoDirection::Out:
-        if (index == 0)
-        {
-            deviceContext->RtPacketObject->SetIsoPacketInfo(direction, isoPacketSize, numIsoPackets);
-        }
         status = InitializeIsoUrbOut(deviceContext, streamObject, transferObject, numIsoPackets);
         RETURN_NTSTATUS_IF_FAILED_MSG(status, "InitializeIsoUrbOut failed");
 
@@ -5778,7 +5919,6 @@ NTSTATUS StopIsoStream(
         deviceContext->StreamObject->Cleanup();
         delete deviceContext->StreamObject;
         deviceContext->StreamObject = nullptr;
-
         if (deviceContext->AudioProperty.OutputInterfaceNumber != 0)
         {
             SelectAlternateInterface(IsoDirection::Out, deviceContext, deviceContext->AudioProperty.OutputInterfaceNumber, 0);
@@ -5791,6 +5931,10 @@ NTSTATUS StopIsoStream(
         {
             WdfDeviceResumeIdle(deviceContext->Device);
         }
+    }
+    if (deviceContext->ContiguousMemory != nullptr)
+    {
+        deviceContext->ContiguousMemory->Clear();
     }
 
     if (deviceContext->ErrorStatistics != nullptr)
@@ -5945,12 +6089,15 @@ Return Value:
         {
             StopIsoStream(deviceContext);
 
+            WdfWaitLockAcquire(deviceContext->AsioWaitLock, nullptr);
             if (deviceContext->AsioBufferObject != nullptr)
             {
                 status = deviceContext->AsioBufferObject->UnsetBuffer();
                 delete deviceContext->AsioBufferObject;
                 deviceContext->AsioBufferObject = nullptr;
             }
+            WdfWaitLockRelease(deviceContext->AsioWaitLock);
+
             TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, "clear asio owner");
             deviceContext->AsioOwner = nullptr;
         }

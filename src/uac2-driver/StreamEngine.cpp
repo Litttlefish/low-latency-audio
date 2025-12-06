@@ -81,6 +81,9 @@ CStreamEngine::CStreamEngine(
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_CIRCUIT, "%!FUNC! Entry, %p, isInput = %!bool!, Stream = %p, StreamFormat = %p", this, Input, Stream, StreamFormat);
     RtlZeroMemory(m_packets, sizeof(m_packets));
 
+    USBAudioAcxDriverStreamResetInternal(m_input, m_deviceIndex, m_deviceContext);
+    USBAudioAcxDriverStreamResetCurrentPacket(m_input, m_deviceIndex, m_deviceContext);
+
     TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, "this = %p, m_streamFormat = %p", this, m_streamFormat);
     TraceAcxDataFormat(TRACE_LEVEL_VERBOSE, m_streamFormat);
 
@@ -311,10 +314,6 @@ CStreamEngine::ReleaseHardware()
     // On the way down we always want to succeed.
     //
     ASSERT(m_currentState == AcxStreamStatePause);
-
-    KeFlushQueuedDpcs();
-
-    USBAudioAcxDriverStreamResetCurrentPacket(m_input, m_deviceIndex, m_deviceContext);
 
     m_currentState = AcxStreamStateStop;
 
@@ -618,6 +617,7 @@ CRenderStreamEngine::ReleaseHardware()
     // m_SaveData.WaitAllWorkItems();
     // m_SaveData.Cleanup();
 
+    USBAudioAcxDriverStreamResetCurrentPacket(false, m_deviceIndex, GetDeviceContext());
     USBAudioAcxDriverStreamReleaseHardware(false, m_deviceIndex, GetDeviceContext());
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit");
@@ -738,10 +738,6 @@ CCaptureStreamEngine::CCaptureStreamEngine(
     PAGED_CODE();
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Entry");
 
-    // m_CurrentPacketStart.QuadPart = 0;
-    // m_LastPacketStart.QuadPart    = 0;
-    USBAudioAcxDriverStreamResetCurrentPacket(TRUE, m_deviceIndex, m_deviceContext);
-
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit");
 }
 
@@ -805,6 +801,7 @@ CCaptureStreamEngine::ReleaseHardware()
     PAGED_CODE();
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Entry");
 
+    USBAudioAcxDriverStreamResetCurrentPacket(false, m_deviceIndex, GetDeviceContext());
     USBAudioAcxDriverStreamReleaseHardware(true, m_deviceIndex, GetDeviceContext());
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit");
@@ -878,6 +875,15 @@ CStreamEngine::GetACXDataFormat()
     TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, "this = %p, m_streamFormat = %p", this, m_streamFormat);
 
     return m_streamFormat;
+}
+
+_Use_decl_annotations_
+PAGED_CODE_SEG
+ACX_STREAM_STATE
+CStreamEngine::GetCurrentState()
+{
+    PAGED_CODE();
+    return m_currentState;
 }
 
 NONPAGED_CODE_SEG

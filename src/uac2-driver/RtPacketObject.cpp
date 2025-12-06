@@ -197,45 +197,7 @@ RtPacketObject::SetDataFormat(
 
 _Use_decl_annotations_
 NONPAGED_CODE_SEG
-void RtPacketObject::SetIsoPacketInfo(
-    IsoDirection direction,
-    ULONG        isoPacketSize,
-    ULONG        numIsoPackets
-)
-{
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry, %s, %d, %d", (direction == IsoDirection::Out) ? "eIsoOut" : "In", isoPacketSize, numIsoPackets);
-
-    RT_PACKET_INFO * rtPacketInfo = nullptr;
-    ULONG            numOfDevices = 0;
-
-    if (direction == IsoDirection::In)
-    {
-        rtPacketInfo = m_inputRtPacketInfo;
-        numOfDevices = m_numOfInputDevices;
-    }
-    else
-    {
-        rtPacketInfo = m_outputRtPacketInfo;
-        numOfDevices = m_numOfOutputDevices;
-    }
-
-    {
-        for (UCHAR deviceIndex = 0; deviceIndex < numOfDevices; deviceIndex++)
-        {
-            WdfSpinLockAcquire(rtPacketInfo[deviceIndex].PositionSpinLock);
-            rtPacketInfo[deviceIndex].IsoPacketSize = isoPacketSize;
-            rtPacketInfo[deviceIndex].NumIsoPackets = numIsoPackets;
-            // rtPacketInfo[deviceIndex].BufferLength  = isoPacketSize * numIsoPackets * UAC_MAX_IRP_NUMBER;
-            WdfSpinLockRelease(rtPacketInfo[deviceIndex].PositionSpinLock);
-        }
-    }
-
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit");
-}
-
-_Use_decl_annotations_
-NONPAGED_CODE_SEG
-void RtPacketObject::Reset(
+void RtPacketObject::ResetInternal(
     bool  isInput,
     ULONG deviceIndex
 )
@@ -258,23 +220,16 @@ void RtPacketObject::Reset(
 
     if (deviceIndex < numOfDevices)
     {
-        WdfSpinLockAcquire(rtPacketInfo[deviceIndex].PositionSpinLock);
-
-        rtPacketInfo[deviceIndex].IsoPacketSize = 0;
-        rtPacketInfo[deviceIndex].NumIsoPackets = 0;
-        rtPacketInfo[deviceIndex].RtPacketPosition = 0;
-        rtPacketInfo[deviceIndex].RtPacketEstimatedPosition = 0;
-        rtPacketInfo[deviceIndex].RtPacketCurrentPacket = 0;
-        rtPacketInfo[deviceIndex].LastPacketStartQpcPosition = 0;
-
-        WdfSpinLockRelease(rtPacketInfo[deviceIndex].PositionSpinLock);
+        InterlockedExchange64((LONG64 *)&rtPacketInfo[deviceIndex].RtPacketEstimatedPosition, 0);
+        InterlockedExchange64((LONG64 *)&rtPacketInfo[deviceIndex].LastPacketStartQpcPosition, 0);
+        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - index, estimatedQPCPosition, lastPacketStartQpcPosition, %d, %llu, %llu", deviceIndex, rtPacketInfo[deviceIndex].RtPacketEstimatedPosition, rtPacketInfo[deviceIndex].LastPacketStartQpcPosition);
     }
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit");
 }
 
 _Use_decl_annotations_
 NONPAGED_CODE_SEG
-void RtPacketObject::Reset(
+void RtPacketObject::ResetInternal(
     bool isInput
 )
 {
@@ -293,9 +248,70 @@ void RtPacketObject::Reset(
 
     for (ULONG deviceIndex = 0; deviceIndex < numOfDevices; deviceIndex++)
     {
-        Reset(isInput, deviceIndex);
+        ResetInternal(isInput, deviceIndex);
     }
 
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit");
+}
+
+_Use_decl_annotations_
+NONPAGED_CODE_SEG
+void RtPacketObject::Pause(
+)
+{
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
+
+    auto pause = [](RT_PACKET_INFO *& rtPacketInfo, ULONG numOfDevices) noexcept -> void {
+        if ((rtPacketInfo == nullptr) || (numOfDevices == 0))
+        {
+            return;
+        }
+        for (ULONG deviceIndex = 0; deviceIndex < numOfDevices; deviceIndex++)
+        {
+            rtPacketInfo[deviceIndex].Pause = true;
+            for (ULONG packet = 0; packet < rtPacketInfo[deviceIndex].RtPacketsCount; packet++)
+            {
+                if ((rtPacketInfo[deviceIndex].RtPackets[packet] != nullptr) && (rtPacketInfo[deviceIndex].RtPacketSize != 0))
+                {
+                    RtlZeroMemory(rtPacketInfo[deviceIndex].RtPackets[packet], rtPacketInfo[deviceIndex].RtPacketSize);
+                }
+            }
+        }
+    };
+
+    pause(m_inputRtPacketInfo, m_numOfInputDevices);
+    pause(m_outputRtPacketInfo, m_numOfOutputDevices);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit");
+}
+
+_Use_decl_annotations_
+NONPAGED_CODE_SEG
+void RtPacketObject::Resume(
+    bool  isInput,
+    ULONG deviceIndex
+)
+{
+    RT_PACKET_INFO * rtPacketInfo = nullptr;
+    ULONG            numOfDevices = 0;
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
+
+    if (isInput)
+    {
+        rtPacketInfo = m_inputRtPacketInfo;
+        numOfDevices = m_numOfInputDevices;
+    }
+    else
+    {
+        rtPacketInfo = m_outputRtPacketInfo;
+        numOfDevices = m_numOfOutputDevices;
+    }
+
+    if (deviceIndex < numOfDevices)
+    {
+        rtPacketInfo[deviceIndex].Pause = false;
+    }
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit");
 }
 
@@ -305,8 +321,6 @@ void RtPacketObject::FeedOutputWriteBytes(
     ULONG /* ulByteCount */
 )
 {
-    // WdfSpinLockAcquire(m_outputRtPacketInfo[deviceIndex].PositionSpinLock);
-    // WdfSpinLockRelease(m_outputRtPacketInfo[deviceIndex].PositionSpinLock);
 }
 
 _Use_decl_annotations_
@@ -347,8 +361,8 @@ RtPacketObject::SetRtPackets(
     rtPacketInfo[deviceIndex].RtPackets = rtPackets;
     rtPacketInfo[deviceIndex].RtPacketsCount = rtPacketsCount;
     rtPacketInfo[deviceIndex].RtPacketSize = rtPacketSize;
-    rtPacketInfo[deviceIndex].usbChannel = channel;
-    rtPacketInfo[deviceIndex].channels = numOfChannelsPerDevice;
+    rtPacketInfo[deviceIndex].UsbChannel = channel;
+    rtPacketInfo[deviceIndex].Channels = numOfChannelsPerDevice;
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit %!STATUS!", status);
 
@@ -432,13 +446,14 @@ RtPacketObject::CopyFromRtPacketToOutputData(
     IF_TRUE_ACTION_JUMP(m_deviceContext->RenderStreamEngine == nullptr, status = STATUS_UNSUCCESSFUL, CopyFromRtPacketToOutputData_Exit);
     IF_TRUE_ACTION_JUMP(transferObject->GetTransferredBytesInThisIrp() == 0, status = STATUS_UNSUCCESSFUL, CopyFromRtPacketToOutputData_Exit);
     IF_TRUE_ACTION_JUMP(m_outputRtPacketInfo[deviceIndex].RtPacketSize == 0, status = STATUS_UNSUCCESSFUL, CopyFromRtPacketToOutputData_Exit);
+    IF_TRUE_ACTION_JUMP(m_outputRtPacketInfo[deviceIndex].Pause, status = STATUS_SUCCESS, CopyFromRtPacketToOutputData_Exit);
 
     bool fedRtPacket = false;
 
     switch (m_deviceContext->AudioProperty.CurrentSampleFormat)
     {
     case UACSampleFormat::UAC_SAMPLE_FORMAT_PCM: {
-        for (ULONG acxCh = 0; acxCh < rtPacketInfo->channels; acxCh++)
+        for (ULONG acxCh = 0; acxCh < rtPacketInfo->Channels; acxCh++)
         {
             ULONG rtPacketIndex = (rtPacketInfo->RtPacketPosition / rtPacketInfo->RtPacketSize) % rtPacketInfo->RtPacketsCount;
             ULONG srcIndexInRtPacket = rtPacketInfo->RtPacketPosition % rtPacketInfo->RtPacketSize + acxCh * m_outputBytesPerSample;
@@ -448,7 +463,7 @@ RtPacketObject::CopyFromRtPacketToOutputData(
             TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - acxCh, rtPacketIndex, srcIndexInRtPacket, %u, %u, %u", acxCh, rtPacketIndex, srcIndexInRtPacket);
             TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - dstData, buffer, length = %p, %p, %u", dstData, buffer, length);
 
-            for (ULONG dstIndex = (acxCh + rtPacketInfo->usbChannel) * usbBytesPerSample; dstIndex < length;)
+            for (ULONG dstIndex = (acxCh + rtPacketInfo->UsbChannel) * usbBytesPerSample; dstIndex < length;)
             {
                 // TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - srcIndexInRtPacket, dstIndex = %u, %u", srcIndexInRtPacket, dstIndex);
 
@@ -523,7 +538,7 @@ RtPacketObject::CopyFromRtPacketToOutputData(
                     }
                 }
                 dstIndex += (usbBytesPerSample * usbChannels);
-                srcIndexInRtPacket += m_outputBytesPerSample * rtPacketInfo->channels;
+                srcIndexInRtPacket += m_outputBytesPerSample * rtPacketInfo->Channels;
                 bytesCopiedDstData += m_outputBytesPerSample;
                 bytesCopiedSrcData += m_outputBytesPerSample;
                 if (srcIndexInRtPacket >= rtPacketInfo->RtPacketSize)
@@ -547,7 +562,7 @@ RtPacketObject::CopyFromRtPacketToOutputData(
     }
     break;
     case UACSampleFormat::UAC_SAMPLE_FORMAT_IEEE_FLOAT: {
-        for (ULONG acxCh = 0; acxCh < rtPacketInfo->channels; acxCh++)
+        for (ULONG acxCh = 0; acxCh < rtPacketInfo->Channels; acxCh++)
         {
             ULONG rtPacketIndex = (rtPacketInfo->RtPacketPosition / rtPacketInfo->RtPacketSize) % rtPacketInfo->RtPacketsCount;
             ULONG srcIndexInRtPacket = rtPacketInfo->RtPacketPosition % rtPacketInfo->RtPacketSize + acxCh * m_outputBytesPerSample;
@@ -557,7 +572,7 @@ RtPacketObject::CopyFromRtPacketToOutputData(
             TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - acxCh, rtPacketIndex, srcIndexInRtPacket, %u, %u, %u", acxCh, rtPacketIndex, srcIndexInRtPacket);
             TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - dstData, buffer, length = %p, %p, %u", dstData, buffer, length);
 
-            for (ULONG dstIndex = (acxCh + rtPacketInfo->usbChannel) * usbBytesPerSample; dstIndex < length;)
+            for (ULONG dstIndex = (acxCh + rtPacketInfo->UsbChannel) * usbBytesPerSample; dstIndex < length;)
             {
                 // TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - srcIndexInRtPacket, dstIndex = %u, %u", srcIndexInRtPacket, dstIndex);
 
@@ -565,7 +580,7 @@ RtPacketObject::CopyFromRtPacketToOutputData(
                 *outSample = *outSample + *(float *)(srcData + srcIndexInRtPacket);
 
                 dstIndex += (usbBytesPerSample * usbChannels);
-                srcIndexInRtPacket += m_outputBytesPerSample * rtPacketInfo->channels;
+                srcIndexInRtPacket += m_outputBytesPerSample * rtPacketInfo->Channels;
                 bytesCopiedDstData += m_outputBytesPerSample;
                 bytesCopiedSrcData += m_outputBytesPerSample;
                 if (srcIndexInRtPacket >= rtPacketInfo->RtPacketSize)
@@ -594,9 +609,9 @@ RtPacketObject::CopyFromRtPacketToOutputData(
     case UACSampleFormat::UAC_SAMPLE_FORMAT_IEC61937_DTS_II:
     case UACSampleFormat::UAC_SAMPLE_FORMAT_IEC61937_DTS_III:
     case UACSampleFormat::UAC_SAMPLE_FORMAT_TYPE_III_WMA: {
-        ASSERT(usbChannels == rtPacketInfo->channels);
+        ASSERT(usbChannels == rtPacketInfo->Channels);
         ASSERT(m_outputBytesPerSample == 2);
-        ASSERT(rtPacketInfo->usbChannel == 0);
+        ASSERT(rtPacketInfo->UsbChannel == 0);
         ULONG rtPacketIndex = (rtPacketInfo->RtPacketPosition / rtPacketInfo->RtPacketSize) % rtPacketInfo->RtPacketsCount;
         ULONG srcIndexInRtPacket = rtPacketInfo->RtPacketPosition % rtPacketInfo->RtPacketSize;
         PBYTE srcData = (PBYTE)rtPacketInfo->RtPackets[rtPacketIndex];
@@ -632,7 +647,7 @@ RtPacketObject::CopyFromRtPacketToOutputData(
             srcIndexInRtPacket = length - (rtPacketInfo->RtPacketSize - srcIndexInRtPacket);
             bytesCopiedSrcData += length;
             fedRtPacket = true;
-            TraceEvents(TRACE_LEVEL_WARNING, TRACE_DEVICE, " - rtPacketIndex, srcIndexInRtPacket, %u, %u", rtPacketIndex, srcIndexInRtPacket);
+            TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - rtPacketIndex, srcIndexInRtPacket, %u, %u", rtPacketIndex, srcIndexInRtPacket);
         }
     }
     break;
@@ -720,13 +735,14 @@ RtPacketObject::CopyToRtPacketFromInputData(
     IF_TRUE_ACTION_JUMP(m_deviceContext->CaptureStreamEngine == nullptr, status = STATUS_UNSUCCESSFUL, CopyToRtPacketFromInputData_Exit);
     IF_TRUE_ACTION_JUMP(transferObject->GetTransferredBytesInThisIrp() == 0, status = STATUS_UNSUCCESSFUL, CopyToRtPacketFromInputData_Exit);
     IF_TRUE_ACTION_JUMP(m_inputRtPacketInfo[deviceIndex].RtPacketSize == 0, status = STATUS_UNSUCCESSFUL, CopyToRtPacketFromInputData_Exit);
+    IF_TRUE_ACTION_JUMP(m_inputRtPacketInfo[deviceIndex].Pause, status = STATUS_SUCCESS, CopyToRtPacketFromInputData_Exit);
 
     bool filledRtPacket = false;
 
     switch (m_deviceContext->AudioProperty.CurrentSampleFormat)
     {
     case UACSampleFormat::UAC_SAMPLE_FORMAT_PCM: {
-        for (ULONG acxCh = 0; acxCh < rtPacketInfo->channels; acxCh++)
+        for (ULONG acxCh = 0; acxCh < rtPacketInfo->Channels; acxCh++)
         {
             ULONG rtPacketIndex = (rtPacketInfo->RtPacketPosition / rtPacketInfo->RtPacketSize) % rtPacketInfo->RtPacketsCount;
             ULONG dstIndexInRtPacket = rtPacketInfo->RtPacketPosition % rtPacketInfo->RtPacketSize + acxCh * m_inputBytesPerSample;
@@ -736,7 +752,7 @@ RtPacketObject::CopyToRtPacketFromInputData(
             TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - acxCh, rtPacketIndex, dstIndexInRtPacket, %u, %u, %u", acxCh, rtPacketIndex, dstIndexInRtPacket);
             TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - srcData, buffer, length = %p, %p, %u", srcData, buffer, length);
 
-            for (ULONG srcIndex = (acxCh + rtPacketInfo->usbChannel) * usbBytesPerSample; srcIndex < length;)
+            for (ULONG srcIndex = (acxCh + rtPacketInfo->UsbChannel) * usbBytesPerSample; srcIndex < length;)
             {
                 // TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - dstIndexInRtPacket, dstIndex = %u, %u", dstIndexInRtPacket, srcIndex);
 
@@ -756,7 +772,7 @@ RtPacketObject::CopyToRtPacketFromInputData(
                     *((LONG *)(dstData + dstIndexInRtPacket)) = *((LONG *)(srcData + srcIndex));
                 }
                 srcIndex += (usbBytesPerSample * usbChannels);
-                dstIndexInRtPacket += m_inputBytesPerSample * rtPacketInfo->channels;
+                dstIndexInRtPacket += m_inputBytesPerSample * rtPacketInfo->Channels;
                 bytesCopiedDstData += m_inputBytesPerSample;
                 bytesCopiedSrcData += m_inputBytesPerSample;
                 if (dstIndexInRtPacket >= rtPacketInfo->RtPacketSize)
@@ -775,7 +791,7 @@ RtPacketObject::CopyToRtPacketFromInputData(
     }
     break;
     case UACSampleFormat::UAC_SAMPLE_FORMAT_IEEE_FLOAT: {
-        for (ULONG acxCh = 0; acxCh < rtPacketInfo->channels; acxCh++)
+        for (ULONG acxCh = 0; acxCh < rtPacketInfo->Channels; acxCh++)
         {
             ULONG rtPacketIndex = (rtPacketInfo->RtPacketPosition / rtPacketInfo->RtPacketSize) % rtPacketInfo->RtPacketsCount;
             ULONG dstIndexInRtPacket = rtPacketInfo->RtPacketPosition % rtPacketInfo->RtPacketSize + acxCh * m_inputBytesPerSample;
@@ -784,13 +800,13 @@ RtPacketObject::CopyToRtPacketFromInputData(
 
             TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - acxCh, rtPacketIndex, dstIndexInRtPacket, %u, %u, %u", acxCh, rtPacketIndex, dstIndexInRtPacket);
             TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - srcData, buffer, length = %p, %p, %u", srcData, buffer, length);
-            for (ULONG srcIndex = (acxCh + rtPacketInfo->usbChannel) * usbBytesPerSample; srcIndex < length;)
+            for (ULONG srcIndex = (acxCh + rtPacketInfo->UsbChannel) * usbBytesPerSample; srcIndex < length;)
             {
                 // TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - dstIndexInRtPacket, dstIndex = %u, %u", dstIndexInRtPacket, srcIndex);
 
                 *((float *)(dstData + dstIndexInRtPacket)) = *((float *)(srcData + srcIndex));
                 srcIndex += (usbBytesPerSample * usbChannels);
-                dstIndexInRtPacket += m_inputBytesPerSample * rtPacketInfo->channels;
+                dstIndexInRtPacket += m_inputBytesPerSample * rtPacketInfo->Channels;
                 bytesCopiedDstData += m_inputBytesPerSample;
                 bytesCopiedSrcData += m_inputBytesPerSample;
                 if (dstIndexInRtPacket >= rtPacketInfo->RtPacketSize)
@@ -814,9 +830,9 @@ RtPacketObject::CopyToRtPacketFromInputData(
     case UACSampleFormat::UAC_SAMPLE_FORMAT_IEC61937_DTS_II:
     case UACSampleFormat::UAC_SAMPLE_FORMAT_IEC61937_DTS_III:
     case UACSampleFormat::UAC_SAMPLE_FORMAT_TYPE_III_WMA: {
-        ASSERT(usbChannels == rtPacketInfo->channels);
+        ASSERT(usbChannels == rtPacketInfo->Channels);
         ASSERT(m_inputBytesPerSample = 2);
-        ASSERT(rtPacketInfo->usbChannel == 0);
+        ASSERT(rtPacketInfo->UsbChannel == 0);
         ULONG rtPacketIndex = (rtPacketInfo->RtPacketPosition / rtPacketInfo->RtPacketSize) % rtPacketInfo->RtPacketsCount;
         ULONG dstIndexInRtPacket = rtPacketInfo->RtPacketPosition % rtPacketInfo->RtPacketSize;
         PBYTE srcData = (PBYTE)buffer;
@@ -973,7 +989,6 @@ RtPacketObject::ResetCurrentPacket(
 
     InterlockedExchange((PLONG)&rtPacketInfo[deviceIndex].RtPacketCurrentPacket, 0);
     InterlockedExchange64((LONG64 *)&rtPacketInfo[deviceIndex].RtPacketPosition, 0);
-    InterlockedExchange64((LONG64 *)&rtPacketInfo[deviceIndex].LastPacketStartQpcPosition, 0);
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit");
 
@@ -1041,38 +1056,25 @@ RtPacketObject::GetPresentationPosition(
 
     RETURN_NTSTATUS_IF_TRUE(deviceIndex >= numOfDevices, STATUS_INVALID_PARAMETER);
 
-    ULONG     blockAlign = (bytesPerSample * rtPacketInfo[deviceIndex].channels);
-    ULONGLONG rtPacketPosition = InterlockedCompareExchange64((LONG64 *)&rtPacketInfo[deviceIndex].RtPacketEstimatedPosition, -1, -1);
+    ULONG     blockAlign = (bytesPerSample * rtPacketInfo[deviceIndex].Channels);
+    ULONGLONG rtPacketPosition = InterlockedCompareExchange64((LONG64 *)&rtPacketInfo[deviceIndex].RtPacketPosition, -1, -1);
     ULONGLONG lastPacketStartQpcPosition = InterlockedCompareExchange64((LONG64 *)&rtPacketInfo[deviceIndex].LastPacketStartQpcPosition, -1, -1);
-    ULONG     bytesPerSecond = (isInput ? m_deviceContext->AudioProperty.InputMeasuredSampleRate : m_deviceContext->AudioProperty.OutputMeasuredSampleRate) * blockAlign;
 
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - bytesPerSample, channels ,bytePerSecond, %u, %u %u", bytesPerSample, rtPacketInfo[deviceIndex].channels, bytesPerSecond);
-
-    if (bytesPerSecond == 0)
-    {
-        if (isInput)
-        {
-            bytesPerSecond = m_inputAvgBytesPerSec;
-        }
-        else
-        {
-            bytesPerSecond = m_outputAvgBytesPerSec;
-        }
-    }
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - bytesPerSample, channels, %u, %u", bytesPerSample, rtPacketInfo[deviceIndex].Channels);
 
     RETURN_NTSTATUS_IF_TRUE(blockAlign == 0, STATUS_UNSUCCESSFUL);
 
-    if (lastPacketStartQpcPosition != 0)
+    if (lastPacketStartQpcPosition != 0ULL)
     {
-        *positionInBlocks = (rtPacketPosition + ((qpcPositionNow - lastPacketStartQpcPosition) * bytesPerSecond / HNS_PER_SEC)) / blockAlign;
+        *positionInBlocks = rtPacketPosition / blockAlign;
     }
     else
     {
-        *positionInBlocks = 0;
+        *positionInBlocks = 0ULL;
     }
     *qpcPosition = qpcPositionNow;
 
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - *qpcPosition, *positionInBlocks, rtPacketPosition, bytesPerSecond, blockAlign = %llu, %llu, %llu, %u, %u", *qpcPosition, *positionInBlocks, rtPacketPosition, bytesPerSecond, blockAlign);
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - *qpcPosition, *positionInBlocks, rtPacketPosition, blockAlign = %llu, %llu, %llu, %u", *qpcPosition, *positionInBlocks, rtPacketPosition, blockAlign);
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit");
 
@@ -1144,25 +1146,11 @@ RtPacketObject::AssignDevices(
     if ((m_numOfInputDevices == 0) && (numOfInputDevices != 0))
     {
         m_numOfInputDevices = numOfInputDevices;
-
-        for (ULONG deviceIndex = 0; deviceIndex < m_numOfInputDevices; deviceIndex++)
-        {
-            WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
-            attributes.ParentObject = m_deviceContext->Device;
-            RETURN_NTSTATUS_IF_FAILED(WdfSpinLockCreate(&attributes, &m_inputRtPacketInfo[deviceIndex].PositionSpinLock));
-        }
     }
 
     if ((m_numOfOutputDevices == 0) && (numOfOutputDevices != 0))
     {
         m_numOfOutputDevices = numOfOutputDevices;
-
-        for (ULONG deviceIndex = 0; deviceIndex < m_numOfOutputDevices; deviceIndex++)
-        {
-            WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
-            attributes.ParentObject = m_deviceContext->Device;
-            RETURN_NTSTATUS_IF_FAILED(WdfSpinLockCreate(&attributes, &m_outputRtPacketInfo[deviceIndex].PositionSpinLock));
-        }
     }
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit %!STATUS!", status);

@@ -199,6 +199,8 @@ typedef struct _DEVICE_CONTEXT
     ContiguousMemory *                 ContiguousMemory;
     RtPacketObject *                   RtPacketObject;
     WDFWAITLOCK                        StreamWaitLock;
+    WDFWAITLOCK                        StreamEngineWaitLock;
+    WDFWAITLOCK                        AsioWaitLock;
     CStreamEngine **                   RenderStreamEngine;
     CStreamEngine **                   CaptureStreamEngine;
     ULONG                              NumOfInputDevices;
@@ -496,6 +498,15 @@ __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
 NTSTATUS
 USBAudioAcxDriverStreamResetCurrentPacket(
+    _In_ bool            isInput,
+    _In_ ULONG           deviceIndex,
+    _In_ PDEVICE_CONTEXT deviceContext
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS
+USBAudioAcxDriverStreamResetInternal(
     _In_ bool            isInput,
     _In_ ULONG           deviceIndex,
     _In_ PDEVICE_CONTEXT deviceContext
