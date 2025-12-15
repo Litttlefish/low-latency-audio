@@ -1610,6 +1610,7 @@ NTSTATUS USBAudio2ControlInterface::SetClockSource(const NS_USBAudio::PCS_GENERI
 
     RETURN_NTSTATUS_IF_TRUE(descriptor == nullptr, STATUS_INVALID_PARAMETER);
     RETURN_NTSTATUS_IF_TRUE((descriptor->bDescriptorType != NS_USBAudio0200::CS_INTERFACE) || (descriptor->bDescriptorSubtype != NS_USBAudio0200::CLOCK_SOURCE), STATUS_INVALID_PARAMETER);
+    RETURN_NTSTATUS_IF_TRUE(descriptor->bLength != NS_USBAudio0200::SIZE_OF_CS_AC_CLOCK_SOURCE_DESCRIPTOR, STATUS_DEVICE_DATA_ERROR);
 
     clockSourceDescriptor = (NS_USBAudio0200::PCS_AC_CLOCK_SOURCE_DESCRIPTOR)descriptor;
 
@@ -1639,6 +1640,7 @@ NTSTATUS USBAudio2ControlInterface::SetInputTerminal(const NS_USBAudio::PCS_GENE
 
     RETURN_NTSTATUS_IF_TRUE(descriptor == nullptr, STATUS_INVALID_PARAMETER);
     RETURN_NTSTATUS_IF_TRUE((descriptor->bDescriptorType != NS_USBAudio0200::CS_INTERFACE) || (descriptor->bDescriptorSubtype != NS_USBAudio0200::INPUT_TERMINAL), STATUS_INVALID_PARAMETER);
+    RETURN_NTSTATUS_IF_TRUE(descriptor->bLength != NS_USBAudio0200::SIZE_OF_CS_AC_INPUT_TERMINAL_DESCRIPTOR, STATUS_DEVICE_DATA_ERROR);
 
     inputTerminalDescriptor = (NS_USBAudio0200::PCS_AC_INPUT_TERMINAL_DESCRIPTOR)descriptor;
 
@@ -1668,6 +1670,7 @@ NTSTATUS USBAudio2ControlInterface::SetOutputTerminal(const NS_USBAudio::PCS_GEN
 
     RETURN_NTSTATUS_IF_TRUE(descriptor == nullptr, STATUS_INVALID_PARAMETER);
     RETURN_NTSTATUS_IF_TRUE((descriptor->bDescriptorType != NS_USBAudio0200::CS_INTERFACE) || (descriptor->bDescriptorSubtype != NS_USBAudio0200::OUTPUT_TERMINAL), STATUS_INVALID_PARAMETER);
+    RETURN_NTSTATUS_IF_TRUE(descriptor->bLength != NS_USBAudio0200::SIZE_OF_CS_AC_OUTPUT_TERMINAL_DESCRIPTOR, STATUS_DEVICE_DATA_ERROR);
 
     outputTerminalDescriptor = (NS_USBAudio0200::PCS_AC_OUTPUT_TERMINAL_DESCRIPTOR)descriptor;
 
@@ -1733,6 +1736,7 @@ NTSTATUS USBAudio2ControlInterface::SetFeatureUnit(const NS_USBAudio::PCS_GENERI
 
     RETURN_NTSTATUS_IF_TRUE(descriptor == nullptr, STATUS_INVALID_PARAMETER);
     RETURN_NTSTATUS_IF_TRUE((descriptor->bDescriptorType != NS_USBAudio0200::CS_INTERFACE) || (descriptor->bDescriptorSubtype != NS_USBAudio0200::FEATURE_UNIT), STATUS_INVALID_PARAMETER);
+    RETURN_NTSTATUS_IF_TRUE(descriptor->bLength < NS_USBAudio0200::SIZE_OF_MINIMUM_CS_AC_FEATURE_UNIT_DESCRIPTOR, STATUS_DEVICE_DATA_ERROR);
 
     featureUnitDescriptor = (NS_USBAudio0200::PCS_AC_FEATURE_UNIT_DESCRIPTOR)descriptor;
 
@@ -1793,13 +1797,21 @@ NTSTATUS USBAudio2ControlInterface::SetClockSelector(const NS_USBAudio::PCS_GENE
 
     RETURN_NTSTATUS_IF_TRUE(descriptor == nullptr, STATUS_INVALID_PARAMETER);
     RETURN_NTSTATUS_IF_TRUE((descriptor->bDescriptorType != NS_USBAudio0200::CS_INTERFACE) || (descriptor->bDescriptorSubtype != NS_USBAudio0200::CLOCK_SELECTOR), STATUS_INVALID_PARAMETER);
+    RETURN_NTSTATUS_IF_TRUE(descriptor->bLength < NS_USBAudio0200::SIZE_OF_MINIMUM_CS_AC_CLOCK_SELECTOR_DESCRIPTOR, STATUS_DEVICE_DATA_ERROR);
 
     if ((descriptor->bLength >= sizeof(NS_USBAudio0200::CS_AC_CLOCK_SELECTOR_DESCRIPTOR)) && (descriptor->bDescriptorSubtype == NS_USBAudio0200::CLOCK_SELECTOR))
     {
         m_clockSelectorDescriptor = (NS_USBAudio0200::PCS_AC_CLOCK_SELECTOR_DESCRIPTOR)descriptor;
 
-        // deviceContext->ClockSelectorId = clockSelectorDescriptor->bClockID;
-        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DESCRIPTOR, " - AC Clock Selector : clock ID %02x", m_clockSelectorDescriptor->bClockID);
+        if (m_clockSelectorDescriptor->bLength >= (sizeof(NS_USBAudio0200::CS_AC_CLOCK_SELECTOR_DESCRIPTOR) + sizeof(NS_USBAudio0200::CS_AC_CLOCK_SELECTOR_DESCRIPTOR::baCSourceID[0]) * (m_clockSelectorDescriptor->bNrInPins - 1)))
+        {
+            // deviceContext->ClockSelectorId = clockSelectorDescriptor->bClockID;
+            TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DESCRIPTOR, " - AC Clock Selector : clock ID %02x", m_clockSelectorDescriptor->bClockID);
+        }
+        else
+        {
+            status = STATUS_DEVICE_DATA_ERROR;
+        }
     }
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Exit %!STATUS!", status);
@@ -2570,6 +2582,7 @@ NTSTATUS USBAudio2ControlInterface::SetCurrentClockSourceInternal(
             for (UCHAR clockSelectorIndex = 0; clockSelectorIndex < m_clockSelectorDescriptor->bNrInPins; clockSelectorIndex++)
             {
                 TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DESCRIPTOR, " - clockSourceID %u, target clockSourceID %u", m_clockSelectorDescriptor->baCSourceID[clockSelectorIndex], targetClockID);
+
                 if (targetClockID == m_clockSelectorDescriptor->baCSourceID[clockSelectorIndex])
                 {
                     targetClockSelectorIndex = clockSelectorIndex + 1; // convert to 1 origin
@@ -3085,6 +3098,16 @@ NTSTATUS USBAudio2StreamInterface::SetFormatType(
         }
         NS_USBAudio0200::PCS_AS_TYPE_I_FORMAT_TYPE_DESCRIPTOR formatITypeDescriptor = (NS_USBAudio0200::PCS_AS_TYPE_I_FORMAT_TYPE_DESCRIPTOR)descriptor;
 
+        if (descriptor->bLength != NS_USBAudio0200::SIZE_OF_CS_AS_TYPE_I_FORMAT_TYPE_DESCRIPTOR)
+        {
+            TraceEvents(TRACE_LEVEL_WARNING, TRACE_DESCRIPTOR, "The length of a format type I descriptor should be %d, but this device was %d.", NS_USBAudio0200::SIZE_OF_CS_AS_TYPE_I_FORMAT_TYPE_DESCRIPTOR, descriptor->bLength);
+        }
+
+        //
+        // The length of a format type I descriptor is 6, but some devices report a larger length when read, so those devices are supported."
+        //
+        RETURN_NTSTATUS_IF_TRUE(descriptor->bLength < NS_USBAudio0200::SIZE_OF_CS_AS_TYPE_I_FORMAT_TYPE_DESCRIPTOR, STATUS_DEVICE_DATA_ERROR);
+
         m_formatITypeDescriptor = formatITypeDescriptor;
         m_enableGetFormatType = false;
 
@@ -3126,6 +3149,7 @@ NTSTATUS USBAudio2StreamInterface::SetFormatType(
             TraceEvents(TRACE_LEVEL_WARNING, TRACE_DESCRIPTOR, "Format type I or III descriptor is already set.");
         }
         NS_USBAudio0200::PCS_AS_TYPE_III_FORMAT_TYPE_DESCRIPTOR formatIIITypeDescriptor = (NS_USBAudio0200::PCS_AS_TYPE_III_FORMAT_TYPE_DESCRIPTOR)descriptor;
+        RETURN_NTSTATUS_IF_TRUE(descriptor->bLength != NS_USBAudio0200::SIZE_OF_CS_AS_TYPE_III_FORMAT_TYPE_DESCRIPTOR, STATUS_DEVICE_DATA_ERROR);
         m_enableGetFormatType = false;
 
         m_formatIIITypeDescriptor = formatIIITypeDescriptor;
@@ -3184,6 +3208,7 @@ NTSTATUS USBAudio2StreamInterface::SetGeneral(const NS_USBAudio::PCS_GENERIC_AUD
 
     RETURN_NTSTATUS_IF_TRUE(descriptor == nullptr, STATUS_INVALID_PARAMETER);
     RETURN_NTSTATUS_IF_TRUE((descriptor->bDescriptorType != NS_USBAudio0200::CS_INTERFACE) || (descriptor->bDescriptorSubtype != NS_USBAudio0200::AS_GENERAL), STATUS_INVALID_PARAMETER);
+    RETURN_NTSTATUS_IF_TRUE(descriptor->bLength != NS_USBAudio0200::SIZE_OF_CS_AS_INTERFACE_DESCRIPTOR, STATUS_DEVICE_DATA_ERROR);
 
     if (m_csAsInterfaceDescriptor != nullptr)
     {
@@ -3220,6 +3245,7 @@ NTSTATUS USBAudio2StreamInterface::SetIsochronousAudioDataEndpoint(
 
     RETURN_NTSTATUS_IF_TRUE(descriptor == nullptr, STATUS_INVALID_PARAMETER);
     RETURN_NTSTATUS_IF_TRUE((descriptor->bDescriptorType != NS_USBAudio0200::CS_ENDPOINT) || (descriptor->bDescriptorSubtype != NS_USBAudio0200::EP_GENERAL), STATUS_INVALID_PARAMETER);
+    RETURN_NTSTATUS_IF_TRUE(descriptor->bLength != NS_USBAudio0200::SIZE_OF_CS_AS_ISOCHRONOUS_AUDIO_DATA_ENDPOINT_DESCRIPTOR, STATUS_DEVICE_DATA_ERROR);
 
     if (m_isochronousAudioDataEndpointDescriptor != nullptr)
     {
@@ -4611,6 +4637,8 @@ USBAudioConfiguration::ParseInterfaceDescriptor(const PUSB_INTERFACE_DESCRIPTOR 
 
     PAGED_CODE();
 
+    RETURN_NTSTATUS_IF_TRUE(descriptor->bLength != NS_USBAudio::SIZE_OF_USB_INTERFACE_DESCRIPTOR, STATUS_DEVICE_DATA_ERROR);
+
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Entry");
 
     if (descriptor->bLength >= NS_USBAudio::SIZE_OF_USB_INTERFACE_DESCRIPTOR)
@@ -4620,6 +4648,10 @@ USBAudioConfiguration::ParseInterfaceDescriptor(const PUSB_INTERFACE_DESCRIPTOR 
         {
             hasTargetInterface = true;
         }
+    }
+    else
+    {
+        status = STATUS_DEVICE_DATA_ERROR;
     }
     if (hasTargetInterface)
     {
@@ -4654,7 +4686,7 @@ USBAudioConfiguration::ParseEndpointDescriptor(PUSB_ENDPOINT_DESCRIPTOR descript
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Entry");
 
     RETURN_NTSTATUS_IF_TRUE(descriptor == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(descriptor->bLength < NS_USBAudio::SIZE_OF_USB_ENDPOINT_DESCRIPTOR, STATUS_INVALID_PARAMETER);
+    RETURN_NTSTATUS_IF_TRUE(descriptor->bLength != NS_USBAudio::SIZE_OF_USB_ENDPOINT_DESCRIPTOR, STATUS_DEVICE_DATA_ERROR);
 
     if ((lastInterface != nullptr) && (descriptor->bLength >= NS_USBAudio::SIZE_OF_USB_ENDPOINT_DESCRIPTOR))
     {
@@ -4693,7 +4725,7 @@ USBAudioConfiguration::ParseEndpointCompanionDescriptor(PUSB_SUPERSPEED_ENDPOINT
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Entry");
 
     RETURN_NTSTATUS_IF_TRUE(descriptor == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(descriptor->bLength < NS_USBAudio::SIZE_OF_USB_SSENDPOINT_COMPANION_DESCRIPTOR, STATUS_INVALID_PARAMETER);
+    RETURN_NTSTATUS_IF_TRUE(descriptor->bLength != NS_USBAudio::SIZE_OF_USB_SSENDPOINT_COMPANION_DESCRIPTOR, STATUS_DEVICE_DATA_ERROR);
 
     if ((lastInterface != nullptr) && (descriptor->bLength >= NS_USBAudio::SIZE_OF_USB_ENDPOINT_DESCRIPTOR))
     {
@@ -5021,6 +5053,10 @@ Return Value:
 
     NTSTATUS - NT status value
 
+    STATUS_DEVICE_DATA_ERROR Returned when the length of an individual descriptor
+    within is invalid, causing an out-of-bounds reference beyond the
+    USB_CONFIGURATION_DESCRIPTOR area, or when the length is 0.
+
 --*/
 USBAudioConfiguration::ParseDescriptors(PUSB_CONFIGURATION_DESCRIPTOR usbConfigurationDescriptor)
 {
@@ -5111,7 +5147,12 @@ USBAudioConfiguration::ParseDescriptors(PUSB_CONFIGURATION_DESCRIPTOR usbConfigu
         if ((totalLength - current) >= NS_USBAudio::SIZE_OF_USB_DESCRIPTOR_HEADER)
         {
             PUSB_COMMON_DESCRIPTOR commonDescriptor = (PUSB_COMMON_DESCRIPTOR) & (byteArray[current]);
-            if ((totalLength - current) >= commonDescriptor->bLength)
+            if (commonDescriptor->bLength == 0)
+            {
+                TraceEvents(TRACE_LEVEL_ERROR, TRACE_DESCRIPTOR, "USB Descriptor Header Length is invalid");
+                status = STATUS_DEVICE_DATA_ERROR;
+            }
+            if (((totalLength - current) >= commonDescriptor->bLength) && NT_SUCCESS(status))
             {
                 switch (commonDescriptor->bDescriptorType)
                 {
@@ -5145,14 +5186,20 @@ USBAudioConfiguration::ParseDescriptors(PUSB_CONFIGURATION_DESCRIPTOR usbConfigu
             }
             else
             {
-                TraceEvents(TRACE_LEVEL_ERROR, TRACE_DESCRIPTOR, "USB Descriptor Header is invalid");
+                status = STATUS_DEVICE_DATA_ERROR;
+                TraceEvents(TRACE_LEVEL_ERROR, TRACE_DESCRIPTOR, "USB Descriptor Header Length is invalid");
             }
             current += commonDescriptor->bLength;
+        }
+        else
+        {
+            TraceEvents(TRACE_LEVEL_ERROR, TRACE_DESCRIPTOR, "USB Descriptor Header Length is invalid");
+            status = STATUS_DEVICE_DATA_ERROR;
         }
     }
 
     //
-    if (!hasAnyTargetInterface)
+    if (!hasAnyTargetInterface && NT_SUCCESS(status))
     {
         // No target interface found.
         status = STATUS_DEVICE_CONFIGURATION_ERROR;
