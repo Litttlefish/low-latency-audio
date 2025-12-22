@@ -2568,6 +2568,10 @@ ActivateAudioInterface(
 
     BuildChannelMap(deviceContext);
 
+    deviceContext->AcClockSources = 1;
+    deviceContext->CurrentClockSource = 0;
+    RtlStringCchCopyW(deviceContext->ClockSourceName[0], UAC_MAX_CLOCK_SOURCE_NAME_LENGTH, L"Internal");
+
     if (deviceContext->UsbAudioConfiguration->hasInputIsochronousInterface() || deviceContext->UsbAudioConfiguration->hasOutputIsochronousInterface())
     {
         bool notify = false;
