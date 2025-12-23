@@ -115,6 +115,22 @@ static const UAC_DRIVER_FLAGS g_DriverSettingsTable[] = {
 
 static const int g_SettingsCount = sizeof(g_DriverSettingsTable) / sizeof(g_DriverSettingsTable[0]);
 
+// INTERNAL_PARAMETERS Registry Value Name
+static const WCHAR c_FirstPacketLatencyName[] = L"FirstPacketLatency";
+static const WCHAR c_ClassicFramesPerIrpName[] = L"ClassicFramesPerIrp";
+static const WCHAR c_MaxIrpNumberName[] = L"MaxIrpNumber";
+static const WCHAR c_PreSendFramesName[] = L"PreSendFrames";
+static const WCHAR c_OutputFrameDelayName[] = L"OutputFrameDelay";
+static const WCHAR c_DelayedOutputBufferSwitchName[] = L"DelayedOutputBufferSwitch";
+static const WCHAR c_InputBufferOperationOffsetName[] = L"InputBufferOperationOffset";
+static const WCHAR c_InputHubOffsetName[] = L"InputHubOffset";
+static const WCHAR c_OutputBufferOperationOffsetName[] = L"OutputBufferOperationOffset";
+static const WCHAR c_OutputHubOffsetName[] = L"OutputHubOffset";
+static const WCHAR c_BufferThreadPriorityName[] = L"BufferThreadPriority";
+static const WCHAR c_ClassicFramesPerIrp2Name[] = L"ClassicFramesPerIrp2";
+static const WCHAR c_SuggestedBufferPeriodName[] = L"SuggestedBufferPeriod";
+static const WCHAR c_AsioDeviceName[] = L"AsioDevice";
+
 //
 //  Local function prototypes
 //
@@ -262,16 +278,24 @@ GetStackCapability(
 
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
-static bool
-IsValidFlags(
-    _In_ PUAC_SET_FLAGS_CONTEXT flags
+static bool IsValidInternalParameters(
+    _In_ const DEVICE_CONTEXT::INTERNAL_PARAMETERS & internalParameters
 );
 
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
 static NTSTATUS
-ConvertFlags(
-    _In_ PUAC_SET_FLAGS_CONTEXT flags
+UpdateFramePerIrp(
+    _In_ PDEVICE_CONTEXT deviceContext,
+    _In_ ULONG           bufferPeriod
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+static NTSTATUS
+UpdateBufferOperationOffset(
+    _In_ PDEVICE_CONTEXT deviceContext,
+    _In_ ULONG           bufferPeriod
 );
 
 __drv_maxIRQL(PASSIVE_LEVEL)
@@ -767,19 +791,13 @@ Return Value:
     }
 
     {
-        deviceContext->Params.FirstPacketLatency = UAC_DEFAULT_FIRST_PACKET_LATENCY;
-        deviceContext->Params.ClassicFramesPerIrp = UAC_DEFAULT_CLASSIC_FRAMES_PER_IRP;
-        deviceContext->Params.MaxIrpNumber = UAC_DEFAULT_MAX_IRP_NUMBER;
-        deviceContext->Params.PreSendFrames = UAC_DEFAULT_PRE_SEND_FRAMES;
-        deviceContext->Params.OutputFrameDelay = UAC_DEFAULT_OUTPUT_FRAME_DELAY;
-        deviceContext->Params.DelayedOutputBufferSwitch = UAC_DEFAULT_DELAYED_OUTPUT_BUFFER_SWITCH;
-        deviceContext->Params.InputBufferOperationOffset = UAC_DEFAULT_IN_BUFFER_OPERATION_OFFSET;
-        deviceContext->Params.InputHubOffset = UAC_DEFAULT_IN_HUB_OFFSET;
-        deviceContext->Params.OutputBufferOperationOffset = UAC_DEFAULT_OUT_BUFFER_OPERATION_OFFSET;
-        deviceContext->Params.OutputHubOffset = UAC_DEFAULT_OUT_HUB_OFFSET;
-        deviceContext->Params.BufferThreadPriority = UAC_DEFAULT_BUFFER_THREAD_PRIORITY;
-        deviceContext->Params.ClassicFramesPerIrp2 = UAC_DEFAULT_CLASSIC_FRAMES_PER_IRP;
-        deviceContext->Params.SuggestedBufferPeriod = UAC_DEFAULT_SUGGESTED_BUFFER_PERIOD;
+        status = USBAudioAcxDriverLoadInternalParametersFromDeviceRegistry(deviceContext);
+
+        if (!NT_SUCCESS(status))
+        {
+            TraceEvents(TRACE_LEVEL_ERROR, TRACE_DEVICE, "USBAudioAcxDriverLoadInternalParametersFromDeviceRegistry failed %!STATUS!", status);
+            return status;
+        }
 
         deviceContext->SupportedControl = g_SupportedControlList[0];
         for (int i = 1; i < g_SupportedControlCount; ++i)
@@ -1034,6 +1052,8 @@ Return Value:
 
     deviceContext = GetDeviceContext(device);
     NT_ASSERT(deviceContext != nullptr);
+
+    USBAudioAcxDriverSaveInternalParametersToDeviceRegistry(deviceContext);
 
     if (deviceContext->ContiguousMemory != nullptr)
     {
@@ -3787,30 +3807,343 @@ bool USBAudioAcxDriverHasAsioOwnership(
     return hasAsioOwnership;
 }
 
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS USBAudioAcxDriverLoadInternalParametersFromDeviceRegistry(
+    _In_ PDEVICE_CONTEXT deviceContext
+)
+{
+    PAGED_CODE();
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC!");
+
+    WDFKEY   registryKey = nullptr;
+    NTSTATUS status = WdfDeviceOpenRegistryKey(deviceContext->Device, PLUGPLAY_REGKEY_DEVICE, KEY_WRITE, WDF_NO_OBJECT_ATTRIBUTES, &registryKey);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "WdfDeviceOpenRegistryKey = %!STATUS!", status);
+
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
+    struct NameAndDataAddress
+    {
+        const WCHAR * name;
+        DWORD *       dataAddless;
+    } internalParametersNameAndDataAddressTable[] = {
+        {c_FirstPacketLatencyName, reinterpret_cast<DWORD *>(&deviceContext->Params.FirstPacketLatency)},
+        {c_ClassicFramesPerIrpName, reinterpret_cast<DWORD *>(&deviceContext->Params.ClassicFramesPerIrp)},
+        {c_MaxIrpNumberName, reinterpret_cast<DWORD *>(&deviceContext->Params.MaxIrpNumber)},
+        {c_PreSendFramesName, reinterpret_cast<DWORD *>(&deviceContext->Params.PreSendFrames)},
+        {c_OutputFrameDelayName, reinterpret_cast<DWORD *>(&deviceContext->Params.OutputFrameDelay)},
+        {c_DelayedOutputBufferSwitchName, reinterpret_cast<DWORD *>(&deviceContext->Params.DelayedOutputBufferSwitch)},
+        {c_InputBufferOperationOffsetName, reinterpret_cast<DWORD *>(&deviceContext->Params.InputBufferOperationOffset)},
+        {c_InputHubOffsetName, reinterpret_cast<DWORD *>(&deviceContext->Params.InputHubOffset)},
+        {c_OutputBufferOperationOffsetName, reinterpret_cast<DWORD *>(&deviceContext->Params.OutputBufferOperationOffset)},
+        {c_OutputHubOffsetName, reinterpret_cast<DWORD *>(&deviceContext->Params.OutputHubOffset)},
+        {c_BufferThreadPriorityName, reinterpret_cast<DWORD *>(&deviceContext->Params.BufferThreadPriority)},
+        {c_ClassicFramesPerIrp2Name, reinterpret_cast<DWORD *>(&deviceContext->Params.ClassicFramesPerIrp2)},
+        {c_SuggestedBufferPeriodName, reinterpret_cast<DWORD *>(&deviceContext->Params.SuggestedBufferPeriod)},
+    };
+
+    const ULONG internalParametersNameAndDataAddressTableSize = SIZEOF_ARRAY(internalParametersNameAndDataAddressTable);
+
+    for (ULONG index = 0; index < internalParametersNameAndDataAddressTableSize; ++index)
+    {
+        UNICODE_STRING valueName;
+        ULONG          resultLength = 0;
+        DWORD          value;
+
+        RtlInitUnicodeString(&valueName, internalParametersNameAndDataAddressTable[index].name);
+
+        status = WdfRegistryQueryValue(
+            registryKey,   // Key
+            &valueName,    // ValueName
+            sizeof(value), // ValueLength
+            &value,        // Value
+            &resultLength, // ValueLengthQueried
+            nullptr        // ValueType
+        );
+
+        if (!NT_SUCCESS(status))
+        {
+            TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "index = %u, name = %ls, status = %!STATUS!", index, internalParametersNameAndDataAddressTable[index].name, status);
+            break;
+        }
+
+        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "index = %u, name = %ls, status = %!STATUS!, value(ULONG) = %u, value(LONG) = %d", index, internalParametersNameAndDataAddressTable[index].name, status, value, value);
+
+        *internalParametersNameAndDataAddressTable[index].dataAddless = value;
+    }
+
+    WdfRegistryClose(registryKey);
+
+    // Check InternalParameters
+    BOOL isValid = IsValidInternalParameters(deviceContext->Params);
+
+    if (!isValid)
+    {
+        deviceContext->Params.FirstPacketLatency = UAC_DEFAULT_FIRST_PACKET_LATENCY;
+        deviceContext->Params.ClassicFramesPerIrp = UAC_DEFAULT_CLASSIC_FRAMES_PER_IRP;
+        deviceContext->Params.MaxIrpNumber = UAC_DEFAULT_MAX_IRP_NUMBER;
+        deviceContext->Params.PreSendFrames = UAC_DEFAULT_PRE_SEND_FRAMES;
+        deviceContext->Params.OutputFrameDelay = UAC_DEFAULT_OUTPUT_FRAME_DELAY;
+        deviceContext->Params.DelayedOutputBufferSwitch = UAC_DEFAULT_DELAYED_OUTPUT_BUFFER_SWITCH;
+        deviceContext->Params.InputBufferOperationOffset = UAC_DEFAULT_IN_BUFFER_OPERATION_OFFSET;
+        deviceContext->Params.InputHubOffset = UAC_DEFAULT_IN_HUB_OFFSET;
+        deviceContext->Params.OutputBufferOperationOffset = UAC_DEFAULT_OUT_BUFFER_OPERATION_OFFSET;
+        deviceContext->Params.OutputHubOffset = UAC_DEFAULT_OUT_HUB_OFFSET;
+        deviceContext->Params.BufferThreadPriority = UAC_DEFAULT_BUFFER_THREAD_PRIORITY;
+        deviceContext->Params.ClassicFramesPerIrp2 = UAC_DEFAULT_CLASSIC_FRAMES_PER_IRP;
+        deviceContext->Params.SuggestedBufferPeriod = UAC_DEFAULT_SUGGESTED_BUFFER_PERIOD;
+
+        status = USBAudioAcxDriverSaveInternalParametersToDeviceRegistry(deviceContext);
+
+        if (!NT_SUCCESS(status))
+        {
+            ASSERT(NT_SUCCESS(status));
+            TraceEvents(TRACE_LEVEL_ERROR, TRACE_REGISTRY, "USBAudioAcxDriverSaveInternalParametersToDeviceRegistry failed %!STATUS!", status);
+            return status;
+        }
+    }
+
+    status = UpdateFramePerIrp(deviceContext, deviceContext->Params.SuggestedBufferPeriod);
+    if (!NT_SUCCESS(status))
+    {
+        ASSERT(NT_SUCCESS(status));
+        TraceEvents(TRACE_LEVEL_ERROR, TRACE_REGISTRY, "UpdateFramePerIrp failed %!STATUS!", status);
+        return status;
+    }
+
+    status = UpdateBufferOperationOffset(deviceContext, deviceContext->Params.SuggestedBufferPeriod);
+    if (!NT_SUCCESS(status))
+    {
+        ASSERT(NT_SUCCESS(status));
+        TraceEvents(TRACE_LEVEL_ERROR, TRACE_REGISTRY, "UpdateBufferOperationOffset failed %!STATUS!", status);
+    }
+
+    return status;
+}
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS USBAudioAcxDriverSaveInternalParametersToDeviceRegistry(
+    _In_ PDEVICE_CONTEXT deviceContext
+)
+{
+    PAGED_CODE();
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC!");
+
+    WDFKEY   registryKey = nullptr;
+    NTSTATUS status = WdfDeviceOpenRegistryKey(deviceContext->Device, PLUGPLAY_REGKEY_DEVICE, KEY_WRITE, WDF_NO_OBJECT_ATTRIBUTES, &registryKey);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "WdfDeviceOpenRegistryKey = %!STATUS!", status);
+
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
+    const struct NameAndDataAddress
+    {
+        const WCHAR * name;
+        DWORD *       dataAddless;
+    } internalParametersNameAndDataAddressTable[] = {
+        {c_FirstPacketLatencyName, reinterpret_cast<DWORD *>(&deviceContext->Params.FirstPacketLatency)},
+        {c_ClassicFramesPerIrpName, reinterpret_cast<DWORD *>(&deviceContext->Params.ClassicFramesPerIrp)},
+        {c_MaxIrpNumberName, reinterpret_cast<DWORD *>(&deviceContext->Params.MaxIrpNumber)},
+        {c_PreSendFramesName, reinterpret_cast<DWORD *>(&deviceContext->Params.PreSendFrames)},
+        {c_OutputFrameDelayName, reinterpret_cast<DWORD *>(&deviceContext->Params.OutputFrameDelay)},
+        {c_DelayedOutputBufferSwitchName, reinterpret_cast<DWORD *>(&deviceContext->Params.DelayedOutputBufferSwitch)},
+        {c_InputBufferOperationOffsetName, reinterpret_cast<DWORD *>(&deviceContext->Params.InputBufferOperationOffset)},
+        {c_InputHubOffsetName, reinterpret_cast<DWORD *>(&deviceContext->Params.InputHubOffset)},
+        {c_OutputBufferOperationOffsetName, reinterpret_cast<DWORD *>(&deviceContext->Params.OutputBufferOperationOffset)},
+        {c_OutputHubOffsetName, reinterpret_cast<DWORD *>(&deviceContext->Params.OutputHubOffset)},
+        {c_BufferThreadPriorityName, reinterpret_cast<DWORD *>(&deviceContext->Params.BufferThreadPriority)},
+        {c_ClassicFramesPerIrp2Name, reinterpret_cast<DWORD *>(&deviceContext->Params.ClassicFramesPerIrp2)},
+        {c_SuggestedBufferPeriodName, reinterpret_cast<DWORD *>(&deviceContext->Params.SuggestedBufferPeriod)},
+    };
+
+    const ULONG internalParametersNameAndDataAddressTableSize = SIZEOF_ARRAY(internalParametersNameAndDataAddressTable);
+
+    for (ULONG index = 0; index < internalParametersNameAndDataAddressTableSize; ++index)
+    {
+        UNICODE_STRING valueName;
+
+        RtlInitUnicodeString(&valueName, internalParametersNameAndDataAddressTable[index].name);
+
+        DWORD value = *internalParametersNameAndDataAddressTable[index].dataAddless;
+
+        status = WdfRegistryAssignValue(
+            registryKey,   // Key
+            &valueName,    // ValueName
+            REG_DWORD,     // ValueType
+            sizeof(value), // ValueLength
+            &value         // Value
+        );
+
+        if (!NT_SUCCESS(status))
+        {
+            break;
+        }
+
+        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "index = %u, name = %ls, status = %!STATUS!, value(ULONG) = %u, value(LONG) = %d", index, internalParametersNameAndDataAddressTable[index].name, status, value, value);
+    }
+
+    WdfRegistryClose(registryKey);
+
+    return status;
+}
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS SaveAsioDeviceToRegistry(
+    _In_ PUNICODE_STRING asioDevice
+)
+{
+    PAGED_CODE();
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Entry");
+
+    NTSTATUS status = STATUS_SUCCESS;
+    WDFKEY   registryKey = nullptr;
+
+    auto exitProcess = wil::scope_exit(
+        [&]() {
+            if (registryKey != nullptr)
+            {
+                WdfRegistryClose(registryKey);
+            }
+
+            TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Exit %!STATUS!", status);
+        }
+    );
+
+    if (asioDevice == nullptr)
+    {
+        status = STATUS_INVALID_PARAMETER;
+        return status;
+    }
+
+    status = WdfRegistryOpenKey(nullptr, &g_RegistryPath, KEY_WRITE, WDF_NO_OBJECT_ATTRIBUTES, &registryKey);
+
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
+    UNICODE_STRING valueName;
+    RtlInitUnicodeString(&valueName, c_AsioDeviceName);
+
+    WDFSTRING value = nullptr;
+    status = WdfStringCreate(asioDevice, WDF_NO_OBJECT_ATTRIBUTES, &value);
+
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
+    status = WdfRegistryAssignString(
+        registryKey, // Key
+        &valueName,  // ValueName
+        value        // String
+    );
+
+    return status;
+}
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS LoadAsioDeviceFromRegistry(
+    _Out_ PUNICODE_STRING asioDevice
+)
+{
+    PAGED_CODE();
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Entry");
+
+    NTSTATUS status = STATUS_SUCCESS;
+    WDFKEY   registryKey = nullptr;
+
+    auto exitProcess = wil::scope_exit(
+        [&]() {
+            if (registryKey != nullptr)
+            {
+                WdfRegistryClose(registryKey);
+            }
+
+            TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Exit %!STATUS!", status);
+        }
+    );
+
+    if (asioDevice == nullptr)
+    {
+        status = STATUS_INVALID_PARAMETER;
+        return status;
+    }
+
+    status = WdfRegistryOpenKey(nullptr, &g_RegistryPath, KEY_READ, WDF_NO_OBJECT_ATTRIBUTES, &registryKey);
+
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
+    UNICODE_STRING valueName;
+    RtlInitUnicodeString(&valueName, c_AsioDeviceName);
+
+    WDFSTRING value = nullptr;
+    status = WdfStringCreate(nullptr, WDF_NO_OBJECT_ATTRIBUTES, &value);
+
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
+    status = WdfRegistryQueryString(
+        registryKey, // Key
+        &valueName,  // ValueName
+        value        // String
+    );
+
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
+    WdfStringGetUnicodeString(value, asioDevice);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "asioDevice->Buffer = %ls", asioDevice->Buffer);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "asioDevice->Length = %u", asioDevice->Length);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "asioDevice->MaximumLength = %u", asioDevice->MaximumLength);
+
+    return status;
+}
+
 PAGED_CODE_SEG
 static _Use_decl_annotations_
-bool IsValidFlags(
-    PUAC_SET_FLAGS_CONTEXT flags
+bool IsValidInternalParameters(
+    _In_ const DEVICE_CONTEXT::INTERNAL_PARAMETERS & internalParameters
 )
 {
     bool isValid = false;
 
     PAGED_CODE();
 
-    if ((flags->FirstPacketLatency > USBD_ISO_START_FRAME_RANGE) ||
-        /* (flags->ClassicFramesPerIrp < UAC_MIN_CLASSIC_FRAMES_PER_IRP) || */
-        (flags->ClassicFramesPerIrp > UAC_MAX_CLASSIC_FRAMES_PER_IRP) ||
-        (flags->MaxIrpNumber < UAC_MIN_MAX_IRP_NUMBER) ||
-        (flags->MaxIrpNumber > UAC_MAX_IRP_NUMBER) ||
-        (flags->PreSendFrames > UAC_MAX_PRE_SEND_FRAMES) ||
-        (flags->OutputFrameDelay < UAC_MIN_OUTPUT_FRAME_DELAY) ||
-        (flags->OutputFrameDelay > UAC_MAX_OUTPUT_FRAME_DELAY) ||
-        //(flags->BufferOperationThread > UAC_MAX_BUFFER_OPERATION_THREAD) ||
-        ((flags->InputBufferOperationOffset & 0xfffffff) > UAC_MAX_CLASSIC_FRAMES_PER_IRP * UAC_MAX_IRP_NUMBER * 8) ||
-        (flags->InputHubOffset > UAC_MAX_CLASSIC_FRAMES_PER_IRP * UAC_MAX_IRP_NUMBER * 8) ||
-        ((flags->OutputBufferOperationOffset & 0xfffffff) > UAC_MAX_CLASSIC_FRAMES_PER_IRP * UAC_MAX_IRP_NUMBER * 8) ||
-        (flags->OutputHubOffset > UAC_MAX_CLASSIC_FRAMES_PER_IRP * UAC_MAX_IRP_NUMBER * 8) ||
-        (flags->BufferThreadPriority > HIGH_PRIORITY))
+    if ((internalParameters.FirstPacketLatency > USBD_ISO_START_FRAME_RANGE) ||
+        /* (internalParameters.ClassicFramesPerIrp < UAC_MIN_CLASSIC_FRAMES_PER_IRP) || */
+        (internalParameters.ClassicFramesPerIrp > UAC_MAX_CLASSIC_FRAMES_PER_IRP) ||
+        (internalParameters.MaxIrpNumber < UAC_MIN_MAX_IRP_NUMBER) ||
+        (internalParameters.MaxIrpNumber > UAC_MAX_IRP_NUMBER) ||
+        (internalParameters.PreSendFrames > UAC_MAX_PRE_SEND_FRAMES) ||
+        (internalParameters.OutputFrameDelay < UAC_MIN_OUTPUT_FRAME_DELAY) ||
+        (internalParameters.OutputFrameDelay > UAC_MAX_OUTPUT_FRAME_DELAY) ||
+        //(internalParameters.BufferOperationThread > UAC_MAX_BUFFER_OPERATION_THREAD) ||
+        ((internalParameters.InputBufferOperationOffset & 0xfffffff) > UAC_MAX_CLASSIC_FRAMES_PER_IRP * UAC_MAX_IRP_NUMBER * 8) ||
+        (internalParameters.InputHubOffset > UAC_MAX_CLASSIC_FRAMES_PER_IRP * UAC_MAX_IRP_NUMBER * 8) ||
+        ((internalParameters.OutputBufferOperationOffset & 0xfffffff) > UAC_MAX_CLASSIC_FRAMES_PER_IRP * UAC_MAX_IRP_NUMBER * 8) ||
+        (internalParameters.OutputHubOffset > UAC_MAX_CLASSIC_FRAMES_PER_IRP * UAC_MAX_IRP_NUMBER * 8) ||
+        (internalParameters.BufferThreadPriority > HIGH_PRIORITY))
     {
         isValid = false;
     }
@@ -3822,15 +4155,19 @@ bool IsValidFlags(
     return isValid;
 }
 
+__drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
-static _Use_decl_annotations_
-NTSTATUS ConvertFlags(
-    PUAC_SET_FLAGS_CONTEXT flags
+static NTSTATUS
+UpdateFramePerIrp(
+    _In_ PDEVICE_CONTEXT deviceContext,
+    _In_ ULONG           bufferPeriod
 )
 {
     PAGED_CODE();
 
-    if (flags == nullptr)
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC!");
+
+    if (deviceContext == nullptr)
     {
         return STATUS_INVALID_PARAMETER;
     }
@@ -3838,15 +4175,53 @@ NTSTATUS ConvertFlags(
     int bufferSizeIndex = 0;
     for (; bufferSizeIndex < g_SettingsCount - 1; ++bufferSizeIndex)
     {
-        if (g_DriverSettingsTable[bufferSizeIndex].PeriodFrames == flags->SuggestedBufferPeriod)
+        if (g_DriverSettingsTable[bufferSizeIndex].PeriodFrames == bufferPeriod)
         {
             break;
         }
     }
-    flags->ClassicFramesPerIrp = g_DriverSettingsTable[bufferSizeIndex].Parameter.ClassicFramesPerIrp;
-    flags->ClassicFramesPerIrp2 = g_DriverSettingsTable[bufferSizeIndex].Parameter.ClassicFramesPerIrp2;
-    flags->OutputBufferOperationOffset = g_DriverSettingsTable[bufferSizeIndex].Parameter.OutputBufferOperationOffset;
-    flags->InputBufferOperationOffset = g_DriverSettingsTable[bufferSizeIndex].Parameter.InputBufferOperationOffset;
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "ClassicFramesPerIrp  %u -> %u", deviceContext->Params.ClassicFramesPerIrp, g_DriverSettingsTable[bufferSizeIndex].Parameter.ClassicFramesPerIrp);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "ClassicFramesPerIrp2 %u -> %u", deviceContext->Params.ClassicFramesPerIrp2, g_DriverSettingsTable[bufferSizeIndex].Parameter.ClassicFramesPerIrp2);
+
+    deviceContext->Params.ClassicFramesPerIrp = g_DriverSettingsTable[bufferSizeIndex].Parameter.ClassicFramesPerIrp;
+    deviceContext->Params.ClassicFramesPerIrp2 = g_DriverSettingsTable[bufferSizeIndex].Parameter.ClassicFramesPerIrp2;
+
+    return STATUS_SUCCESS;
+}
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+static NTSTATUS
+UpdateBufferOperationOffset(
+    _In_ PDEVICE_CONTEXT deviceContext,
+    _In_ ULONG           bufferPeriod
+)
+{
+    PAGED_CODE();
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC!");
+
+    if (deviceContext == nullptr)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    int bufferSizeIndex = 0;
+
+    for (; bufferSizeIndex < g_SettingsCount - 1; ++bufferSizeIndex)
+    {
+        if (g_DriverSettingsTable[bufferSizeIndex].PeriodFrames == bufferPeriod)
+        {
+            break;
+        }
+    }
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "OutputBufferOperationOffset  0x%08x -> 0x%08x", deviceContext->Params.OutputBufferOperationOffset, g_DriverSettingsTable[bufferSizeIndex].Parameter.OutputBufferOperationOffset);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "InputBufferOperationOffset   0x%08x -> 0x%08x", deviceContext->Params.InputBufferOperationOffset, g_DriverSettingsTable[bufferSizeIndex].Parameter.InputBufferOperationOffset);
+
+    deviceContext->Params.OutputBufferOperationOffset = g_DriverSettingsTable[bufferSizeIndex].Parameter.OutputBufferOperationOffset;
+    deviceContext->Params.InputBufferOperationOffset = g_DriverSettingsTable[bufferSizeIndex].Parameter.InputBufferOperationOffset;
 
     return STATUS_SUCCESS;
 }
@@ -4236,138 +4611,6 @@ VOID EvtUSBAudioAcxDriverSetClockSource(
     }
     else
     {
-    }
-Exit:
-    WdfRequestCompleteWithInformation(request, status, outDataCb);
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
-}
-
-PAGED_CODE_SEG
-_Use_decl_annotations_
-VOID EvtUSBAudioAcxDriverSetFlags(
-    WDFOBJECT  object,
-    WDFREQUEST request
-)
-{
-    NTSTATUS               status = STATUS_NOT_SUPPORTED;
-    ACX_REQUEST_PARAMETERS params{};
-    ULONG_PTR              outDataCb = 0;
-    // ACXSTREAM              stream = static_cast<ACXSTREAM>(object);
-    // ASSERT(stream != nullptr);
-
-    WDFDEVICE device = AcxCircuitGetWdfDevice((ACXCIRCUIT)object);
-    ASSERT(device != nullptr);
-
-    PDEVICE_CONTEXT deviceContext = GetDeviceContext(device);
-    ASSERT(deviceContext != nullptr);
-
-    PAGED_CODE();
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
-
-    ACX_REQUEST_PARAMETERS_INIT(&params);
-    AcxRequestGetParameters(request, &params);
-
-    ASSERT(params.Type == AcxRequestTypeProperty);
-    ASSERT(params.Parameters.Property.Verb == AcxPropertyVerbSet);
-    ASSERT(params.Parameters.Property.Control == nullptr);
-    ASSERT(params.Parameters.Property.ControlCb == 0);
-    ASSERT(params.Parameters.Property.Value != nullptr);
-    ASSERT(params.Parameters.Property.ValueCb >= sizeof(UAC_SET_FLAGS_CONTEXT));
-
-    IF_TRUE_ACTION_JUMP(((params.Parameters.Property.Control != nullptr) ||
-                         (params.Parameters.Property.ControlCb != 0 ||
-                          (params.Parameters.Property.Value == nullptr) ||
-                          (params.Parameters.Property.ValueCb < sizeof(UAC_SET_FLAGS_CONTEXT)))),
-                        ASSERT(FALSE);
-                        outDataCb = 0; status = STATUS_INVALID_PARAMETER;,
-                                                                         Exit);
-
-    PUAC_SET_FLAGS_CONTEXT flags = (PUAC_SET_FLAGS_CONTEXT)params.Parameters.Property.Value;
-    if (!IsValidFlags(flags))
-    {
-        status = STATUS_INVALID_PARAMETER;
-    }
-    else if ((deviceContext->Params.FirstPacketLatency != flags->FirstPacketLatency) ||
-             (deviceContext->Params.ClassicFramesPerIrp != flags->ClassicFramesPerIrp) ||
-             (deviceContext->Params.ClassicFramesPerIrp2 != flags->ClassicFramesPerIrp2) ||
-             (deviceContext->Params.MaxIrpNumber != flags->MaxIrpNumber) ||
-             (deviceContext->Params.PreSendFrames != flags->PreSendFrames) ||
-             (deviceContext->Params.OutputFrameDelay != flags->OutputFrameDelay) ||
-             (deviceContext->Params.DelayedOutputBufferSwitch != flags->DelayedOutputBufferSwitch) ||
-             //(deviceContext->Params.BufferOperationThread != flags->BufferOperationThread) ||
-             (deviceContext->Params.InputBufferOperationOffset != flags->InputBufferOperationOffset) ||
-             (deviceContext->Params.InputHubOffset != flags->InputHubOffset) ||
-             (deviceContext->Params.OutputBufferOperationOffset != flags->OutputBufferOperationOffset) ||
-             (deviceContext->Params.OutputHubOffset != flags->OutputHubOffset) ||
-             (deviceContext->Params.BufferThreadPriority != flags->BufferThreadPriority) ||
-             (deviceContext->Params.SuggestedBufferPeriod != flags->SuggestedBufferPeriod))
-    {
-        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - FirstPacketLatency        = %u -> %u", deviceContext->Params.FirstPacketLatency, flags->FirstPacketLatency);
-        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - ClassicFramesPerIrp       = %u -> %u", deviceContext->Params.ClassicFramesPerIrp, flags->ClassicFramesPerIrp);
-        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - ClassicFramesPerIrp2      = %u -> %u", deviceContext->Params.ClassicFramesPerIrp2, flags->ClassicFramesPerIrp2);
-        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - MaxIrpNumber              = %u -> %u", deviceContext->Params.MaxIrpNumber, flags->MaxIrpNumber);
-        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - PreSendFrames             = %u -> %u", deviceContext->Params.PreSendFrames, flags->PreSendFrames);
-        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - OutputFrameDelay          = %d -> %d", deviceContext->Params.OutputFrameDelay, flags->OutputFrameDelay);
-        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - DelayedOutputBufferSwitch = %u -> %u", deviceContext->Params.DelayedOutputBufferSwitch, flags->DelayedOutputBufferSwitch);
-        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - InputBufferOperationOffset   = %u -> %u", deviceContext->Params.InputBufferOperationOffset, flags->InputBufferOperationOffset);
-        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - InputHubOffset               = %u -> %u", deviceContext->Params.InputHubOffset, flags->InputHubOffset);
-        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - OutputBufferOperationOffset  = %u -> %u", deviceContext->Params.OutputBufferOperationOffset, flags->OutputBufferOperationOffset);
-        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - OutputHubOffset              = %u -> %u", deviceContext->Params.OutputHubOffset, flags->OutputHubOffset);
-        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - BufferThreadPriority      = %u -> %u", deviceContext->Params.BufferThreadPriority, flags->BufferThreadPriority);
-        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - SuggestedBufferPeriod     = %u -> %u", deviceContext->Params.SuggestedBufferPeriod, flags->SuggestedBufferPeriod);
-
-        WdfWaitLockAcquire(deviceContext->StreamWaitLock, nullptr);
-        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_MULTICLIENT, " - start counter asio %ld, start counter acx audio %ld, start counter iso stream %ld", deviceContext->StartCounterAsio, deviceContext->StartCounterWdmAudio, deviceContext->StartCounterIsoStream);
-        if ((deviceContext->StartCounterAsio != 0) || (deviceContext->StartCounterWdmAudio != 0))
-        {
-            StopIsoStream(deviceContext);
-        }
-        UAC_SET_FLAGS_CONTEXT tempFlags;
-        RtlCopyMemory(&tempFlags, flags, sizeof(tempFlags));
-
-        ConvertFlags(&tempFlags);
-
-        deviceContext->Params.FirstPacketLatency = tempFlags.FirstPacketLatency;
-        deviceContext->Params.ClassicFramesPerIrp = tempFlags.ClassicFramesPerIrp;
-        deviceContext->Params.MaxIrpNumber = tempFlags.MaxIrpNumber;
-        deviceContext->Params.PreSendFrames = tempFlags.PreSendFrames;
-        deviceContext->Params.OutputFrameDelay = tempFlags.OutputFrameDelay;
-        deviceContext->Params.DelayedOutputBufferSwitch = tempFlags.DelayedOutputBufferSwitch;
-        // deviceContext->Params.BufferOperationThread = tempFlags.BufferOperationThread;
-        deviceContext->Params.InputBufferOperationOffset = tempFlags.InputBufferOperationOffset;
-        deviceContext->Params.InputHubOffset = tempFlags.InputHubOffset;
-        deviceContext->Params.OutputBufferOperationOffset = tempFlags.OutputBufferOperationOffset;
-        deviceContext->Params.OutputHubOffset = tempFlags.OutputHubOffset;
-        deviceContext->Params.BufferThreadPriority = tempFlags.BufferThreadPriority;
-        deviceContext->Params.ClassicFramesPerIrp2 = tempFlags.ClassicFramesPerIrp2;
-        deviceContext->Params.SuggestedBufferPeriod = tempFlags.SuggestedBufferPeriod;
-
-        ULONG desiredFormatType = NS_USBAudio0200::FORMAT_TYPE_I;
-        ULONG desiredFormat = NS_USBAudio0200::PCM;
-
-        USBAudioDataFormat::ConvertFormatToSampleFormat(deviceContext->AudioProperty.CurrentSampleFormat, desiredFormatType, desiredFormat);
-
-        status = ActivateAudioInterface(deviceContext, deviceContext->AudioProperty.SampleRate, desiredFormatType, desiredFormat, deviceContext->AudioProperty.InputBytesPerSample, deviceContext->AudioProperty.InputValidBitsPerSample, deviceContext->AudioProperty.OutputBytesPerSample, deviceContext->AudioProperty.OutputValidBitsPerSample);
-        //					WriteDeviceParams(deviceContext);
-        if (NT_SUCCESS(status))
-        {
-            if ((deviceContext->StartCounterAsio != 0) || (deviceContext->StartCounterWdmAudio != 0))
-            {
-                StartIsoStream(deviceContext);
-            }
-            else
-            {
-                ASSERT(NT_SUCCESS(status));
-            }
-        }
-        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_MULTICLIENT, " - start counter asio %ld, start counter acx audio %ld, start counter iso stream %ld", deviceContext->StartCounterAsio, deviceContext->StartCounterWdmAudio, deviceContext->StartCounterIsoStream);
-        WdfWaitLockRelease(deviceContext->StreamWaitLock);
-        status = STATUS_SUCCESS;
-    }
-    else
-    {
-        // Nothing is done because there is no change in flag.
-        status = STATUS_SUCCESS;
     }
 Exit:
     WdfRequestCompleteWithInformation(request, status, outDataCb);
@@ -5141,6 +5384,427 @@ Exit:
 
     WdfRequestCompleteWithInformation(request, status, outDataCb);
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
+}
+
+PAGED_CODE_SEG
+_Use_decl_annotations_
+VOID EvtUSBAudioAcxDriverGetBufferPeriod(
+    _In_ WDFOBJECT  object,
+    _In_ WDFREQUEST request
+)
+{
+    PAGED_CODE();
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Entry");
+
+    NTSTATUS  status = STATUS_NOT_SUPPORTED;
+    ULONG_PTR outDataCb = 0;
+
+    ACX_REQUEST_PARAMETERS params{};
+    ACX_REQUEST_PARAMETERS_INIT(&params);
+    AcxRequestGetParameters(request, &params);
+
+    ASSERT(params.Type == AcxRequestTypeProperty);
+    ASSERT(params.Parameters.Property.Verb == AcxPropertyVerbGet);
+    ASSERT(params.Parameters.Property.Control == nullptr);
+    ASSERT(params.Parameters.Property.ControlCb == 0);
+    ASSERT(params.Parameters.Property.Value != nullptr);
+    ASSERT(params.Parameters.Property.ValueCb == sizeof(ULONG));
+
+    WDFDEVICE device = AcxCircuitGetWdfDevice((ACXCIRCUIT)object);
+    ASSERT(device != nullptr);
+
+    PDEVICE_CONTEXT deviceContext = GetDeviceContext(device);
+    ASSERT(deviceContext != nullptr);
+
+    WdfWaitLockAcquire(deviceContext->StreamWaitLock, nullptr);
+
+    IF_TRUE_ACTION_JUMP(
+        (
+            (params.Parameters.Property.Control != nullptr) ||
+            (params.Parameters.Property.ControlCb != 0) ||
+            (params.Parameters.Property.Value == nullptr) ||
+            (params.Parameters.Property.ValueCb < sizeof(ULONG))
+        ),
+        ASSERT(FALSE);
+        outDataCb = 0;
+        status = STATUS_INVALID_PARAMETER;,
+                                          Exit
+    );
+
+    ULONG * bufferPeriod = static_cast<ULONG *>(params.Parameters.Property.Value);
+    outDataCb = sizeof(ULONG);
+    *bufferPeriod = deviceContext->Params.SuggestedBufferPeriod;
+    status = STATUS_SUCCESS;
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "BufferPeriod = %u", *bufferPeriod);
+
+Exit:
+
+    WdfWaitLockRelease(deviceContext->StreamWaitLock);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Exit %!STATUS!", status);
+
+    WdfRequestCompleteWithInformation(request, status, outDataCb);
+}
+
+PAGED_CODE_SEG
+_Use_decl_annotations_
+VOID EvtUSBAudioAcxDriverSetBufferPeriod(
+    _In_ WDFOBJECT  object,
+    _In_ WDFREQUEST request
+)
+{
+    PAGED_CODE();
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Entry");
+
+    NTSTATUS  status = STATUS_NOT_SUPPORTED;
+    ULONG_PTR outDataCb = 0;
+
+    ACX_REQUEST_PARAMETERS params{};
+    ACX_REQUEST_PARAMETERS_INIT(&params);
+    AcxRequestGetParameters(request, &params);
+
+    ASSERT(params.Type == AcxRequestTypeProperty);
+    ASSERT(params.Parameters.Property.Verb == AcxPropertyVerbGet);
+    ASSERT(params.Parameters.Property.Control == nullptr);
+    ASSERT(params.Parameters.Property.ControlCb == 0);
+    ASSERT(params.Parameters.Property.Value != nullptr);
+    ASSERT(params.Parameters.Property.ValueCb == sizeof(ULONG));
+
+    WDFDEVICE device = AcxCircuitGetWdfDevice((ACXCIRCUIT)object);
+    ASSERT(device != nullptr);
+
+    PDEVICE_CONTEXT deviceContext = GetDeviceContext(device);
+    ASSERT(deviceContext != nullptr);
+
+    ULONG * bufferPeriod = static_cast<ULONG *>(params.Parameters.Property.Value);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "BufferPeriod = %u", *bufferPeriod);
+
+    WdfWaitLockAcquire(deviceContext->StreamWaitLock, nullptr);
+
+    IF_TRUE_ACTION_JUMP(
+        (
+            (params.Parameters.Property.Control != nullptr) ||
+            (params.Parameters.Property.ControlCb != 0) ||
+            (params.Parameters.Property.Value == nullptr) ||
+            (params.Parameters.Property.ValueCb < sizeof(ULONG))
+        ),
+        ASSERT(FALSE);
+        outDataCb = 0;
+        status = STATUS_INVALID_PARAMETER;,
+                                          Exit
+    );
+
+    if (*bufferPeriod != deviceContext->Params.SuggestedBufferPeriod)
+    {
+
+        if ((deviceContext->StartCounterAsio != 0) || (deviceContext->StartCounterWdmAudio != 0))
+        {
+            StopIsoStream(deviceContext);
+        }
+
+        status = UpdateFramePerIrp(deviceContext, *bufferPeriod);
+        ASSERT(NT_SUCCESS(status));
+
+        status = UpdateBufferOperationOffset(deviceContext, *bufferPeriod);
+        ASSERT(NT_SUCCESS(status));
+
+        deviceContext->Params.SuggestedBufferPeriod = *bufferPeriod;
+
+        status = ActivateAudioInterface(
+            deviceContext,
+            deviceContext->AudioProperty.SampleRate,
+            NS_USBAudio0200::FORMAT_TYPE_I,
+            NS_USBAudio0200::PCM,
+            deviceContext->AudioProperty.InputBytesPerSample,
+            deviceContext->AudioProperty.InputValidBitsPerSample,
+            deviceContext->AudioProperty.OutputBytesPerSample,
+            deviceContext->AudioProperty.OutputValidBitsPerSample
+        );
+
+        if (NT_SUCCESS(status))
+        {
+            if ((deviceContext->StartCounterAsio != 0) || (deviceContext->StartCounterWdmAudio != 0))
+            {
+                StartIsoStream(deviceContext);
+            }
+            else
+            {
+                ASSERT(NT_SUCCESS(status));
+            }
+        }
+    }
+    else
+    {
+        // Nothing is done because there is no change in flag.
+        status = STATUS_SUCCESS;
+    }
+
+Exit:
+
+    WdfWaitLockRelease(deviceContext->StreamWaitLock);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Exit %!STATUS!", status);
+
+    WdfRequestCompleteWithInformation(request, status, outDataCb);
+}
+
+PAGED_CODE_SEG
+_Use_decl_annotations_
+VOID EvtUSBAudioAcxDriverGetInputLatency(
+    _In_ WDFOBJECT  object,
+    _In_ WDFREQUEST request
+)
+{
+    PAGED_CODE();
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Entry");
+
+    NTSTATUS  status = STATUS_NOT_SUPPORTED;
+    ULONG_PTR outDataCb = 0;
+
+    ACX_REQUEST_PARAMETERS params{};
+    ACX_REQUEST_PARAMETERS_INIT(&params);
+    AcxRequestGetParameters(request, &params);
+
+    ASSERT(params.Type == AcxRequestTypeProperty);
+    ASSERT(params.Parameters.Property.Verb == AcxPropertyVerbGet);
+    ASSERT(params.Parameters.Property.Control == nullptr);
+    ASSERT(params.Parameters.Property.ControlCb == 0);
+    ASSERT(params.Parameters.Property.Value != nullptr);
+    ASSERT(params.Parameters.Property.ValueCb == sizeof(LONG));
+
+    WDFDEVICE device = AcxCircuitGetWdfDevice((ACXCIRCUIT)object);
+    ASSERT(device != nullptr);
+
+    PDEVICE_CONTEXT deviceContext = GetDeviceContext(device);
+    ASSERT(deviceContext != nullptr);
+
+    WdfWaitLockAcquire(deviceContext->StreamWaitLock, nullptr);
+
+    IF_TRUE_ACTION_JUMP(
+        (
+            (params.Parameters.Property.Control != nullptr) ||
+            (params.Parameters.Property.ControlCb != 0) ||
+            (params.Parameters.Property.Value == nullptr) ||
+            (params.Parameters.Property.ValueCb < sizeof(LONG))
+        ),
+        ASSERT(FALSE);
+        outDataCb = 0;
+        status = STATUS_INVALID_PARAMETER;,
+                                          Exit
+    );
+
+    LONG * inputLatency = static_cast<LONG *>(params.Parameters.Property.Value);
+    outDataCb = sizeof(LONG);
+    *inputLatency = deviceContext->Params.SuggestedBufferPeriod + deviceContext->AudioProperty.InputLatencyOffset;
+    status = STATUS_SUCCESS;
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "InputLatency = %d", *inputLatency);
+
+Exit:
+
+    WdfWaitLockRelease(deviceContext->StreamWaitLock);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Exit %!STATUS!", status);
+
+    WdfRequestCompleteWithInformation(request, status, outDataCb);
+}
+
+PAGED_CODE_SEG
+_Use_decl_annotations_
+VOID EvtUSBAudioAcxDriverGetOutputLatency(
+    _In_ WDFOBJECT  object,
+    _In_ WDFREQUEST request
+)
+{
+    PAGED_CODE();
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Entry");
+
+    NTSTATUS  status = STATUS_NOT_SUPPORTED;
+    ULONG_PTR outDataCb = 0;
+
+    ACX_REQUEST_PARAMETERS params{};
+    ACX_REQUEST_PARAMETERS_INIT(&params);
+    AcxRequestGetParameters(request, &params);
+
+    ASSERT(params.Type == AcxRequestTypeProperty);
+    ASSERT(params.Parameters.Property.Verb == AcxPropertyVerbGet);
+    ASSERT(params.Parameters.Property.Control == nullptr);
+    ASSERT(params.Parameters.Property.ControlCb == 0);
+    ASSERT(params.Parameters.Property.Value != nullptr);
+    ASSERT(params.Parameters.Property.ValueCb == sizeof(LONG));
+
+    WDFDEVICE device = AcxCircuitGetWdfDevice((ACXCIRCUIT)object);
+    ASSERT(device != nullptr);
+
+    PDEVICE_CONTEXT deviceContext = GetDeviceContext(device);
+    ASSERT(deviceContext != nullptr);
+
+    WdfWaitLockAcquire(deviceContext->StreamWaitLock, nullptr);
+
+    IF_TRUE_ACTION_JUMP(
+        (
+            (params.Parameters.Property.Control != nullptr) ||
+            (params.Parameters.Property.ControlCb != 0) ||
+            (params.Parameters.Property.Value == nullptr) ||
+            (params.Parameters.Property.ValueCb < sizeof(LONG))
+        ),
+        ASSERT(FALSE);
+        outDataCb = 0;
+        status = STATUS_INVALID_PARAMETER;,
+                                          Exit
+    );
+
+    LONG * outputLatency = static_cast<LONG *>(params.Parameters.Property.Value);
+    outDataCb = sizeof(LONG);
+    *outputLatency = deviceContext->Params.SuggestedBufferPeriod + deviceContext->AudioProperty.OutputLatencyOffset;
+    status = STATUS_SUCCESS;
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "OutputLatency = %d", *outputLatency);
+
+Exit:
+
+    WdfWaitLockRelease(deviceContext->StreamWaitLock);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Exit %!STATUS!", status);
+
+    WdfRequestCompleteWithInformation(request, status, outDataCb);
+}
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+VOID EvtUSBAudioAcxDriverSetAsioDevice(
+    _In_ WDFOBJECT  object,
+    _In_ WDFREQUEST request
+)
+{
+    PAGED_CODE();
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Entry");
+
+    ACX_REQUEST_PARAMETERS params{};
+    ACX_REQUEST_PARAMETERS_INIT(&params);
+    AcxRequestGetParameters(request, &params);
+
+    ASSERT(params.Type == AcxRequestTypeProperty);
+    ASSERT(params.Parameters.Property.Verb == AcxPropertyVerbGet);
+    ASSERT(params.Parameters.Property.Control == nullptr);
+    ASSERT(params.Parameters.Property.ControlCb == 0);
+    ASSERT(params.Parameters.Property.Value != nullptr);
+    ASSERT(0 < params.Parameters.Property.ValueCb);
+
+    WDFDEVICE device = AcxCircuitGetWdfDevice((ACXCIRCUIT)object);
+    ASSERT(device != nullptr);
+
+    PDEVICE_CONTEXT deviceContext = GetDeviceContext(device);
+    ASSERT(deviceContext != nullptr);
+
+    WdfWaitLockAcquire(deviceContext->StreamWaitLock, nullptr);
+
+    NTSTATUS status = STATUS_NOT_SUPPORTED;
+
+    IF_TRUE_ACTION_JUMP(
+        (
+            (params.Parameters.Property.Control != nullptr) ||
+            (params.Parameters.Property.ControlCb != 0) ||
+            (params.Parameters.Property.Value == nullptr) ||
+            (params.Parameters.Property.ValueCb == 0)
+        ),
+        ASSERT(FALSE);
+        status = STATUS_INVALID_PARAMETER;,
+                                          Exit
+    );
+
+    UNICODE_STRING asioDevice;
+    RtlInitUnicodeString(&asioDevice, (PCWSTR)params.Parameters.Property.Value);
+    status = SaveAsioDeviceToRegistry(&asioDevice);
+
+Exit:
+
+    WdfWaitLockRelease(deviceContext->StreamWaitLock);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Exit %!STATUS!", status);
+
+    WdfRequestCompleteWithInformation(request, status, 0);
+}
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+VOID EvtUSBAudioAcxDriverGetAsioDevice(
+    _In_ WDFOBJECT  object,
+    _In_ WDFREQUEST request
+)
+{
+    PAGED_CODE();
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Entry");
+
+    ULONG_PTR outDataCb = 0;
+
+    ACX_REQUEST_PARAMETERS params{};
+    ACX_REQUEST_PARAMETERS_INIT(&params);
+    AcxRequestGetParameters(request, &params);
+
+    ASSERT(params.Type == AcxRequestTypeProperty);
+    ASSERT(params.Parameters.Property.Verb == AcxPropertyVerbGet);
+    ASSERT(params.Parameters.Property.Control == nullptr);
+    ASSERT(params.Parameters.Property.ControlCb == 0);
+    ASSERT(params.Parameters.Property.Value != nullptr);
+    ASSERT(0 < params.Parameters.Property.ValueCb);
+
+    WDFDEVICE device = AcxCircuitGetWdfDevice((ACXCIRCUIT)object);
+    ASSERT(device != nullptr);
+
+    PDEVICE_CONTEXT deviceContext = GetDeviceContext(device);
+    ASSERT(deviceContext != nullptr);
+
+    WdfWaitLockAcquire(deviceContext->StreamWaitLock, nullptr);
+
+    NTSTATUS status = STATUS_NOT_SUPPORTED;
+
+    IF_TRUE_ACTION_JUMP(
+        (
+            (params.Parameters.Property.Control != nullptr) ||
+            (params.Parameters.Property.ControlCb != 0) ||
+            (params.Parameters.Property.Value == nullptr) ||
+            (params.Parameters.Property.ValueCb == 0)
+        ),
+        ASSERT(FALSE);
+        status = STATUS_INVALID_PARAMETER;,
+                                          Exit
+    );
+
+    UNICODE_STRING asioDevice;
+    status = LoadAsioDeviceFromRegistry(&asioDevice);
+
+    IF_TRUE_ACTION_JUMP(
+        !NT_SUCCESS(status), 
+        ASSERT(FALSE), 
+        Exit);
+
+    IF_TRUE_ACTION_JUMP(
+        params.Parameters.Property.ValueCb < asioDevice.MaximumLength, 
+        status = STATUS_BUFFER_TOO_SMALL, 
+        Exit);
+
+    RtlZeroMemory(params.Parameters.Property.Value, params.Parameters.Property.ValueCb);
+
+    RtlCopyMemory(params.Parameters.Property.Value, asioDevice.Buffer, asioDevice.MaximumLength);
+
+    outDataCb = asioDevice.MaximumLength;
+
+Exit:
+
+    WdfWaitLockRelease(deviceContext->StreamWaitLock);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Exit %!STATUS! outDataCb = %llu", status, outDataCb);
+
+    WdfRequestCompleteWithInformation(request, status, outDataCb);
 }
 
 NONPAGED_CODE_SEG

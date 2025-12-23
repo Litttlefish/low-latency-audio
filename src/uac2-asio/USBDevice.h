@@ -54,11 +54,6 @@ BOOL SetClockSource(
     _In_ ULONG  index
 );
 
-BOOL SetFlags(
-    _In_ HANDLE                        deviceHandle,
-    _In_ const UAC_SET_FLAGS_CONTEXT & flags
-);
-
 BOOL SetSampleFormat(
     _In_ HANDLE deviceHandle,
     _In_ ULONG  sampleFormat
@@ -95,4 +90,9 @@ BOOL UnsetAsioBuffer(
 
 BOOL ReleaseAsioOwnership(
     _In_ HANDLE deviceHandle
+);
+
+BOOL GetPeriodFrames(
+    _In_ HANDLE  deviceHandle,
+    _Out_ LONG * periodFrames
 );

@@ -83,8 +83,8 @@ constexpr ULONG toULong(UACSampleFormat sampleFormat)
 }
 
 // User - Kernel For version check
-#define UAC_KERNEL_DRIVER_VERSION 0x00010000
-#define UAC_ASIO_DRIVER_VERSION   0x00010000
+#define UAC_KERNEL_DRIVER_VERSION 0x00020000
+#define UAC_ASIO_DRIVER_VERSION   0x00020000
 
 enum class DeviceStatuses
 {
@@ -110,7 +110,6 @@ enum class KsPropertyUACLowLatencyAudio
     GetClockInfo,
     GetLatencyOffsetOfSampleRate,
     SetClockSource,
-    SetFlags,
     SetSampleFormat,
     ChangeSampleRate,
     GetAsioOwnership,
@@ -118,7 +117,13 @@ enum class KsPropertyUACLowLatencyAudio
     StopAsioStream,
     SetAsioBuffer,
     UnsetAsioBuffer,
-    ReleaseAsioOwnership
+    ReleaseAsioOwnership,
+    GetBufferPeriod,
+    SetBufferPeriod,
+    GetInputLatency,
+    GetOutputLatency,
+    SetAsioDevice,
+    GetAsioDevice,
 };
 
 constexpr int toInt(KsPropertyUACLowLatencyAudio Property)

@@ -95,15 +95,6 @@ static ACX_PROPERTY_ITEM s_PropertyItems[] = {
     },
     {
         &KSPROPSETID_LowLatencyAudio,                     // const GUID * Set;
-        toInt(KsPropertyUACLowLatencyAudio::SetFlags),
-        ACX_PROPERTY_ITEM_FLAG_SET,                       // ULONG Flags;
-        EvtUSBAudioAcxDriverSetFlags,                     // PFN_ACX_OBJECT_PROCESS_REQUEST EvtAcxObjectProcessRequest;
-        0,                                                // PVOID Reserved;
-        0,                                                // ULONG ControlCb;
-        sizeof(UAC_SET_FLAGS_CONTEXT),                    // ULONG ValueCb;
-    },
-    {
-        &KSPROPSETID_LowLatencyAudio,                     // const GUID * Set;
         toInt(KsPropertyUACLowLatencyAudio::SetSampleFormat),
         ACX_PROPERTY_ITEM_FLAG_SET,                       // ULONG Flags;
         EvtUSBAudioAcxDriverSetSampleFormat,              // PFN_ACX_OBJECT_PROCESS_REQUEST EvtAcxObjectProcessRequest;
@@ -170,6 +161,60 @@ static ACX_PROPERTY_ITEM s_PropertyItems[] = {
         toInt(KsPropertyUACLowLatencyAudio::ReleaseAsioOwnership),
         ACX_PROPERTY_ITEM_FLAG_SET,                       // ULONG Flags;
         EvtUSBAudioAcxDriverReleaseAsioOwnership,         // PFN_ACX_OBJECT_PROCESS_REQUEST EvtAcxObjectProcessRequest;
+        0,                                                // PVOID Reserved;
+        0,                                                // ULONG ControlCb;
+        0,                                                // ULONG ValueCb;
+    },
+    {
+        &KSPROPSETID_LowLatencyAudio,                     // const GUID * Set;
+        toInt(KsPropertyUACLowLatencyAudio::GetBufferPeriod),
+        ACX_PROPERTY_ITEM_FLAG_GET,                       // ULONG Flags;
+        EvtUSBAudioAcxDriverGetBufferPeriod,              // PFN_ACX_OBJECT_PROCESS_REQUEST EvtAcxObjectProcessRequest;
+        0,                                                // PVOID Reserved;
+        0,                                                // ULONG ControlCb;
+        sizeof(ULONG),                                    // ULONG ValueCb;
+    },
+    {
+        &KSPROPSETID_LowLatencyAudio,                     // const GUID * Set;
+        toInt(KsPropertyUACLowLatencyAudio::SetBufferPeriod),
+        ACX_PROPERTY_ITEM_FLAG_SET,                       // ULONG Flags;
+        EvtUSBAudioAcxDriverSetBufferPeriod,              // PFN_ACX_OBJECT_PROCESS_REQUEST EvtAcxObjectProcessRequest;
+        0,                                                // PVOID Reserved;
+        0,                                                // ULONG ControlCb;
+        sizeof(ULONG),                                    // ULONG ValueCb;
+    },
+    {
+        &KSPROPSETID_LowLatencyAudio,                     // const GUID * Set;
+        toInt(KsPropertyUACLowLatencyAudio::GetInputLatency),
+        ACX_PROPERTY_ITEM_FLAG_GET,                       // ULONG Flags;
+        EvtUSBAudioAcxDriverGetInputLatency,              // PFN_ACX_OBJECT_PROCESS_REQUEST EvtAcxObjectProcessRequest;
+        0,                                                // PVOID Reserved;
+        0,                                                // ULONG ControlCb;
+        sizeof(LONG),                                         // ULONG ValueCb;
+    },
+    {
+        &KSPROPSETID_LowLatencyAudio,                     // const GUID * Set;
+        toInt(KsPropertyUACLowLatencyAudio::GetOutputLatency),
+        ACX_PROPERTY_ITEM_FLAG_GET,                       // ULONG Flags;
+        EvtUSBAudioAcxDriverGetOutputLatency,              // PFN_ACX_OBJECT_PROCESS_REQUEST EvtAcxObjectProcessRequest;
+        0,                                                // PVOID Reserved;
+        0,                                                // ULONG ControlCb;
+        sizeof(LONG),                                         // ULONG ValueCb;
+    },
+    {
+        &KSPROPSETID_LowLatencyAudio,                     // const GUID * Set;
+        toInt(KsPropertyUACLowLatencyAudio::SetAsioDevice),
+        ACX_PROPERTY_ITEM_FLAG_SET,                       // ULONG Flags;
+        EvtUSBAudioAcxDriverSetAsioDevice,                // PFN_ACX_OBJECT_PROCESS_REQUEST EvtAcxObjectProcessRequest;
+        0,                                                // PVOID Reserved;
+        0,                                                // ULONG ControlCb;
+        0,                                                // ULONG ValueCb;
+    },
+    {
+        &KSPROPSETID_LowLatencyAudio,                     // const GUID * Set;
+        toInt(KsPropertyUACLowLatencyAudio::GetAsioDevice),
+        ACX_PROPERTY_ITEM_FLAG_GET,                       // ULONG Flags;
+        EvtUSBAudioAcxDriverGetAsioDevice,                // PFN_ACX_OBJECT_PROCESS_REQUEST EvtAcxObjectProcessRequest;
         0,                                                // PVOID Reserved;
         0,                                                // ULONG ControlCb;
         0,                                                // ULONG ValueCb;

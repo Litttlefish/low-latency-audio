@@ -303,25 +303,6 @@ BOOL SetClockSource(
     return result;
 }
 
-_Use_decl_annotations_
-BOOL SetFlags(
-    HANDLE                        deviceHandle,
-    const UAC_SET_FLAGS_CONTEXT & flags
-)
-{
-    BOOL                  result = FALSE;
-    KSPROPERTY            privateProperty{};
-    ULONG                 bytesReturned = 0;
-    UAC_SET_FLAGS_CONTEXT setFlagsContext = flags;
-
-    privateProperty.Set = KSPROPSETID_LowLatencyAudio;
-    privateProperty.Flags = KSPROPERTY_TYPE_SET;
-    privateProperty.Id = toInt(KsPropertyUACLowLatencyAudio::SetFlags);
-
-    result = DeviceIoControl(deviceHandle, IOCTL_KS_PROPERTY, &privateProperty, sizeof(KSPROPERTY), &setFlagsContext, sizeof(UAC_SET_FLAGS_CONTEXT), &bytesReturned, nullptr);
-
-    return result;
-}
 
 _Use_decl_annotations_
 BOOL SetSampleFormat(
@@ -472,6 +453,34 @@ BOOL ReleaseAsioOwnership(
     privateProperty.Id = toInt(KsPropertyUACLowLatencyAudio::ReleaseAsioOwnership);
 
     result = DeviceIoControl(deviceHandle, IOCTL_KS_PROPERTY, &privateProperty, sizeof(KSPROPERTY), nullptr, 0, &bytesReturned, nullptr);
+
+    return result;
+}
+
+_Use_decl_annotations_
+BOOL GetPeriodFrames(
+    _In_ HANDLE  deviceHandle,
+    _Out_ LONG * periodFrames
+)
+{
+    info_print_("GetPeriodFrames\n");
+
+    BOOL       result = FALSE;
+    KSPROPERTY privateProperty{};
+    ULONG      bytesReturned = 0;
+
+    if (periodFrames == NULL)
+    {
+        return result;
+    }
+
+    privateProperty.Set = KSPROPSETID_LowLatencyAudio;
+    privateProperty.Flags = KSPROPERTY_TYPE_GET;
+    privateProperty.Id = toInt(KsPropertyUACLowLatencyAudio::GetBufferPeriod);
+
+    result = DeviceIoControl(deviceHandle, IOCTL_KS_PROPERTY, &privateProperty, sizeof(KSPROPERTY), periodFrames, sizeof(LONG), &bytesReturned, nullptr);
+
+    info_print_("*periodFrames = %u\n", *periodFrames);
 
     return result;
 }
