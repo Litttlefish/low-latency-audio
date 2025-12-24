@@ -3815,11 +3815,11 @@ NTSTATUS USBAudioAcxDriverLoadInternalParametersFromDeviceRegistry(
 {
     PAGED_CODE();
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC!");
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC!");
 
     WDFKEY   registryKey = nullptr;
     NTSTATUS status = WdfDeviceOpenRegistryKey(deviceContext->Device, PLUGPLAY_REGKEY_DEVICE, KEY_WRITE, WDF_NO_OBJECT_ATTRIBUTES, &registryKey);
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "WdfDeviceOpenRegistryKey = %!STATUS!", status);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "WdfDeviceOpenRegistryKey = %!STATUS!", status);
 
     if (!NT_SUCCESS(status))
     {
@@ -3867,11 +3867,11 @@ NTSTATUS USBAudioAcxDriverLoadInternalParametersFromDeviceRegistry(
 
         if (!NT_SUCCESS(status))
         {
-            TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "index = %u, name = %ls, status = %!STATUS!", index, internalParametersNameAndDataAddressTable[index].name, status);
+            TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "index = %u, name = %ls, status = %!STATUS!", index, internalParametersNameAndDataAddressTable[index].name, status);
             break;
         }
 
-        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "index = %u, name = %ls, status = %!STATUS!, value(ULONG) = %u, value(LONG) = %d", index, internalParametersNameAndDataAddressTable[index].name, status, value, value);
+        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "index = %u, name = %ls, status = %!STATUS!, value(ULONG) = %u, value(LONG) = %d", index, internalParametersNameAndDataAddressTable[index].name, status, value, value);
 
         *internalParametersNameAndDataAddressTable[index].dataAddless = value;
     }
@@ -3902,7 +3902,7 @@ NTSTATUS USBAudioAcxDriverLoadInternalParametersFromDeviceRegistry(
         if (!NT_SUCCESS(status))
         {
             ASSERT(NT_SUCCESS(status));
-            TraceEvents(TRACE_LEVEL_ERROR, TRACE_REGISTRY, "USBAudioAcxDriverSaveInternalParametersToDeviceRegistry failed %!STATUS!", status);
+            TraceEvents(TRACE_LEVEL_ERROR, TRACE_DEVICE, "USBAudioAcxDriverSaveInternalParametersToDeviceRegistry failed %!STATUS!", status);
             return status;
         }
     }
@@ -3911,7 +3911,7 @@ NTSTATUS USBAudioAcxDriverLoadInternalParametersFromDeviceRegistry(
     if (!NT_SUCCESS(status))
     {
         ASSERT(NT_SUCCESS(status));
-        TraceEvents(TRACE_LEVEL_ERROR, TRACE_REGISTRY, "UpdateFramePerIrp failed %!STATUS!", status);
+        TraceEvents(TRACE_LEVEL_ERROR, TRACE_DEVICE, "UpdateFramePerIrp failed %!STATUS!", status);
         return status;
     }
 
@@ -3919,7 +3919,7 @@ NTSTATUS USBAudioAcxDriverLoadInternalParametersFromDeviceRegistry(
     if (!NT_SUCCESS(status))
     {
         ASSERT(NT_SUCCESS(status));
-        TraceEvents(TRACE_LEVEL_ERROR, TRACE_REGISTRY, "UpdateBufferOperationOffset failed %!STATUS!", status);
+        TraceEvents(TRACE_LEVEL_ERROR, TRACE_DEVICE, "UpdateBufferOperationOffset failed %!STATUS!", status);
     }
 
     return status;
@@ -3933,11 +3933,11 @@ NTSTATUS USBAudioAcxDriverSaveInternalParametersToDeviceRegistry(
 {
     PAGED_CODE();
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC!");
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC!");
 
     WDFKEY   registryKey = nullptr;
     NTSTATUS status = WdfDeviceOpenRegistryKey(deviceContext->Device, PLUGPLAY_REGKEY_DEVICE, KEY_WRITE, WDF_NO_OBJECT_ATTRIBUTES, &registryKey);
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "WdfDeviceOpenRegistryKey = %!STATUS!", status);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "WdfDeviceOpenRegistryKey = %!STATUS!", status);
 
     if (!NT_SUCCESS(status))
     {
@@ -3987,7 +3987,7 @@ NTSTATUS USBAudioAcxDriverSaveInternalParametersToDeviceRegistry(
             break;
         }
 
-        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "index = %u, name = %ls, status = %!STATUS!, value(ULONG) = %u, value(LONG) = %d", index, internalParametersNameAndDataAddressTable[index].name, status, value, value);
+        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "index = %u, name = %ls, status = %!STATUS!, value(ULONG) = %u, value(LONG) = %d", index, internalParametersNameAndDataAddressTable[index].name, status, value, value);
     }
 
     WdfRegistryClose(registryKey);
@@ -4003,7 +4003,7 @@ NTSTATUS SaveAsioDeviceToRegistry(
 {
     PAGED_CODE();
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Entry");
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
 
     NTSTATUS status = STATUS_SUCCESS;
     WDFKEY   registryKey = nullptr;
@@ -4015,7 +4015,7 @@ NTSTATUS SaveAsioDeviceToRegistry(
                 WdfRegistryClose(registryKey);
             }
 
-            TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Exit %!STATUS!", status);
+            TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
         }
     );
 
@@ -4060,7 +4060,7 @@ NTSTATUS LoadAsioDeviceFromRegistry(
 {
     PAGED_CODE();
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Entry");
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
 
     NTSTATUS status = STATUS_SUCCESS;
     WDFKEY   registryKey = nullptr;
@@ -4072,7 +4072,7 @@ NTSTATUS LoadAsioDeviceFromRegistry(
                 WdfRegistryClose(registryKey);
             }
 
-            TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Exit %!STATUS!", status);
+            TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
         }
     );
 
@@ -4113,9 +4113,9 @@ NTSTATUS LoadAsioDeviceFromRegistry(
 
     WdfStringGetUnicodeString(value, asioDevice);
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "asioDevice->Buffer = %ls", asioDevice->Buffer);
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "asioDevice->Length = %u", asioDevice->Length);
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "asioDevice->MaximumLength = %u", asioDevice->MaximumLength);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "asioDevice->Buffer = %ls", asioDevice->Buffer);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "asioDevice->Length = %u", asioDevice->Length);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "asioDevice->MaximumLength = %u", asioDevice->MaximumLength);
 
     return status;
 }
@@ -4165,7 +4165,7 @@ UpdateFramePerIrp(
 {
     PAGED_CODE();
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC!");
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC!");
 
     if (deviceContext == nullptr)
     {
@@ -4181,8 +4181,8 @@ UpdateFramePerIrp(
         }
     }
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "ClassicFramesPerIrp  %u -> %u", deviceContext->Params.ClassicFramesPerIrp, g_DriverSettingsTable[bufferSizeIndex].Parameter.ClassicFramesPerIrp);
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "ClassicFramesPerIrp2 %u -> %u", deviceContext->Params.ClassicFramesPerIrp2, g_DriverSettingsTable[bufferSizeIndex].Parameter.ClassicFramesPerIrp2);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "ClassicFramesPerIrp  %u -> %u", deviceContext->Params.ClassicFramesPerIrp, g_DriverSettingsTable[bufferSizeIndex].Parameter.ClassicFramesPerIrp);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "ClassicFramesPerIrp2 %u -> %u", deviceContext->Params.ClassicFramesPerIrp2, g_DriverSettingsTable[bufferSizeIndex].Parameter.ClassicFramesPerIrp2);
 
     deviceContext->Params.ClassicFramesPerIrp = g_DriverSettingsTable[bufferSizeIndex].Parameter.ClassicFramesPerIrp;
     deviceContext->Params.ClassicFramesPerIrp2 = g_DriverSettingsTable[bufferSizeIndex].Parameter.ClassicFramesPerIrp2;
@@ -5395,7 +5395,7 @@ VOID EvtUSBAudioAcxDriverGetBufferPeriod(
 {
     PAGED_CODE();
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Entry");
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
 
     NTSTATUS  status = STATUS_NOT_SUPPORTED;
     ULONG_PTR outDataCb = 0;
@@ -5437,13 +5437,13 @@ VOID EvtUSBAudioAcxDriverGetBufferPeriod(
     *bufferPeriod = deviceContext->Params.SuggestedBufferPeriod;
     status = STATUS_SUCCESS;
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "BufferPeriod = %u", *bufferPeriod);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "BufferPeriod = %u", *bufferPeriod);
 
 Exit:
 
     WdfWaitLockRelease(deviceContext->StreamWaitLock);
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Exit %!STATUS!", status);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
 
     WdfRequestCompleteWithInformation(request, status, outDataCb);
 }
@@ -5457,7 +5457,7 @@ VOID EvtUSBAudioAcxDriverSetBufferPeriod(
 {
     PAGED_CODE();
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Entry");
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
 
     NTSTATUS  status = STATUS_NOT_SUPPORTED;
     ULONG_PTR outDataCb = 0;
@@ -5481,7 +5481,7 @@ VOID EvtUSBAudioAcxDriverSetBufferPeriod(
 
     ULONG * bufferPeriod = static_cast<ULONG *>(params.Parameters.Property.Value);
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "BufferPeriod = %u", *bufferPeriod);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "BufferPeriod = %u", *bufferPeriod);
 
     WdfWaitLockAcquire(deviceContext->StreamWaitLock, nullptr);
 
@@ -5547,7 +5547,7 @@ Exit:
 
     WdfWaitLockRelease(deviceContext->StreamWaitLock);
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Exit %!STATUS!", status);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
 
     WdfRequestCompleteWithInformation(request, status, outDataCb);
 }
@@ -5561,7 +5561,7 @@ VOID EvtUSBAudioAcxDriverGetInputLatency(
 {
     PAGED_CODE();
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Entry");
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
 
     NTSTATUS  status = STATUS_NOT_SUPPORTED;
     ULONG_PTR outDataCb = 0;
@@ -5603,13 +5603,13 @@ VOID EvtUSBAudioAcxDriverGetInputLatency(
     *inputLatency = deviceContext->Params.SuggestedBufferPeriod + deviceContext->AudioProperty.InputLatencyOffset;
     status = STATUS_SUCCESS;
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "InputLatency = %d", *inputLatency);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "InputLatency = %d", *inputLatency);
 
 Exit:
 
     WdfWaitLockRelease(deviceContext->StreamWaitLock);
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Exit %!STATUS!", status);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
 
     WdfRequestCompleteWithInformation(request, status, outDataCb);
 }
@@ -5623,7 +5623,7 @@ VOID EvtUSBAudioAcxDriverGetOutputLatency(
 {
     PAGED_CODE();
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Entry");
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
 
     NTSTATUS  status = STATUS_NOT_SUPPORTED;
     ULONG_PTR outDataCb = 0;
@@ -5665,13 +5665,13 @@ VOID EvtUSBAudioAcxDriverGetOutputLatency(
     *outputLatency = deviceContext->Params.SuggestedBufferPeriod + deviceContext->AudioProperty.OutputLatencyOffset;
     status = STATUS_SUCCESS;
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "OutputLatency = %d", *outputLatency);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "OutputLatency = %d", *outputLatency);
 
 Exit:
 
     WdfWaitLockRelease(deviceContext->StreamWaitLock);
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Exit %!STATUS!", status);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
 
     WdfRequestCompleteWithInformation(request, status, outDataCb);
 }
@@ -5685,7 +5685,7 @@ VOID EvtUSBAudioAcxDriverSetAsioDevice(
 {
     PAGED_CODE();
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Entry");
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
 
     ACX_REQUEST_PARAMETERS params{};
     ACX_REQUEST_PARAMETERS_INIT(&params);
@@ -5728,7 +5728,7 @@ Exit:
 
     WdfWaitLockRelease(deviceContext->StreamWaitLock);
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Exit %!STATUS!", status);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
 
     WdfRequestCompleteWithInformation(request, status, 0);
 }
@@ -5742,7 +5742,7 @@ VOID EvtUSBAudioAcxDriverGetAsioDevice(
 {
     PAGED_CODE();
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Entry");
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
 
     ULONG_PTR outDataCb = 0;
 
@@ -5802,7 +5802,7 @@ Exit:
 
     WdfWaitLockRelease(deviceContext->StreamWaitLock);
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_REGISTRY, "%!FUNC! Exit %!STATUS! outDataCb = %llu", status, outDataCb);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS! outDataCb = %llu", status, outDataCb);
 
     WdfRequestCompleteWithInformation(request, status, outDataCb);
 }

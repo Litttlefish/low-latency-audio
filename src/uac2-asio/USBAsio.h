@@ -190,7 +190,6 @@ class CUSBAsio : public IASIO, public CUnknown
     LONG                          m_outputReadyBlock{0};
     HANDLE                        m_usbDeviceHandle{INVALID_HANDLE_VALUE};
     UAC_AUDIO_PROPERTY            m_audioProperty{0};
-    ULONG                         m_fixedSamplingRate{0};//[ZANTEI]
     ASIOIoFormatType              m_requestedSampleFormat{0};
     ULONG                         m_inAvailableChannels{0};
     ULONG                         m_outAvailableChannels{0};
