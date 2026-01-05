@@ -130,6 +130,7 @@ static const WCHAR c_BufferThreadPriorityName[] = L"BufferThreadPriority";
 static const WCHAR c_ClassicFramesPerIrp2Name[] = L"ClassicFramesPerIrp2";
 static const WCHAR c_SuggestedBufferPeriodName[] = L"SuggestedBufferPeriod";
 static const WCHAR c_AsioDeviceName[] = L"AsioDevice";
+static const WCHAR c_SampleRateName[] = L"SampleRate";
 
 //
 //  Local function prototypes
@@ -912,10 +913,8 @@ Return Value:
             ++retryCount;
         }
 
-        // TBD
-        // Normally it is read from the registry and written to the registry when the device is destroyed.
-        //
         ULONG desiredSampleRate = UAC_DEFAULT_SAMPLE_RATE;
+        LoadSampleRateFromRegistry(deviceContext->Device, desiredSampleRate);
 
         // The default is PCM, but for devices that do not support PCM, the format closest to PCM will be selected.
         ULONG desiredFormatType = NS_USBAudio0200::FORMAT_TYPE_I;
@@ -1054,6 +1053,8 @@ Return Value:
     NT_ASSERT(deviceContext != nullptr);
 
     USBAudioAcxDriverSaveInternalParametersToDeviceRegistry(deviceContext);
+
+    SaveSampleRateToRegistry(deviceContext->Device,deviceContext->AudioProperty.SampleRate);
 
     if (deviceContext->ContiguousMemory != nullptr)
     {
@@ -4116,6 +4117,136 @@ NTSTATUS LoadAsioDeviceFromRegistry(
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "asioDevice->Buffer = %ls", asioDevice->Buffer);
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "asioDevice->Length = %u", asioDevice->Length);
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "asioDevice->MaximumLength = %u", asioDevice->MaximumLength);
+
+    return status;
+}
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS SaveSampleRateToRegistry(
+    _In_ WDFDEVICE device,
+    _In_ ULONG sampleRate
+)
+{
+    PAGED_CODE();
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
+
+    NTSTATUS status = STATUS_SUCCESS;
+    WDFKEY   registryKey = nullptr;
+
+    auto exitProcess = wil::scope_exit(
+        [&]() {
+            if (registryKey != nullptr)
+            {
+                WdfRegistryClose(registryKey);
+            }
+
+            TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
+        }
+    );
+
+    if (device == nullptr)
+    {
+        status = STATUS_INVALID_PARAMETER;
+        return status;
+    }
+
+    status = WdfDeviceOpenRegistryKey(device, PLUGPLAY_REGKEY_DEVICE, KEY_WRITE, WDF_NO_OBJECT_ATTRIBUTES, &registryKey);
+
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
+    UNICODE_STRING valueName;
+    RtlInitUnicodeString(&valueName, c_SampleRateName);
+
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
+    status = WdfRegistryAssignValue(
+        registryKey,        // Key
+        &valueName,         // ValueName
+        REG_DWORD,          // ValueType
+        sizeof(sampleRate), // ValueLength
+        &sampleRate         // Value
+    );
+
+    return status;
+}
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS LoadSampleRateFromRegistry(
+    _In_ WDFDEVICE  device,
+    _Out_ ULONG &sampleRate
+)
+{
+    PAGED_CODE();
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
+
+    NTSTATUS status = STATUS_SUCCESS;
+    WDFKEY   registryKey = nullptr;
+
+    auto exitProcess = wil::scope_exit(
+        [&]() {
+            if (registryKey != nullptr)
+            {
+                WdfRegistryClose(registryKey);
+            }
+
+            if (!NT_SUCCESS(status))
+            {
+                sampleRate = UAC_DEFAULT_SAMPLE_RATE;
+            }
+
+            TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
+        }
+    );
+
+    if (device == nullptr)
+    {
+        status = STATUS_INVALID_PARAMETER;
+        return status;
+    }
+
+    status = WdfDeviceOpenRegistryKey(device, PLUGPLAY_REGKEY_DEVICE, KEY_WRITE, WDF_NO_OBJECT_ATTRIBUTES, &registryKey);
+
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
+    UNICODE_STRING valueName;
+    RtlInitUnicodeString(&valueName, c_SampleRateName);
+
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
+    ULONG          value = 0;
+    ULONG          resultLength = 0;
+
+    status = WdfRegistryQueryValue(
+        registryKey,    // Key
+        &valueName,     // ValueName
+        sizeof(ULONG),  // ValueLength
+        &value,         // Value
+        &resultLength,  // ValueLengthQueried
+        nullptr         // ValueType
+    );
+
+    if (!NT_SUCCESS(status))
+    {
+        return status;
+    }
+
+    sampleRate = value;
 
     return status;
 }

@@ -573,6 +573,20 @@ NTSTATUS LoadAsioDeviceFromRegistry(
 
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
+NTSTATUS SaveSampleRateToRegistry(
+    _In_ WDFDEVICE device,
+    _In_ ULONG sampleRate
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS LoadSampleRateFromRegistry(
+    _In_  WDFDEVICE device,
+    _Out_ ULONG& sampleRate
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
 VOID EvtUSBAudioAcxDriverGetAudioProperty(
     _In_ WDFOBJECT  object,
     _In_ WDFREQUEST request

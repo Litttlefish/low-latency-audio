@@ -5792,7 +5792,7 @@ USBAudioConfiguration::GetNearestSupportedSampleRate(
     {
         if ((m_deviceContext->AudioProperty.SupportedSampleRate & sampleRateMask))
         {
-            if ((c_SampleRateList[frameRateListIndex] >= sampleRate) || (newSampleRate == 0))
+            if ((c_SampleRateList[frameRateListIndex] >= sampleRate) && (newSampleRate == 0))
             {
                 newSampleRate = c_SampleRateList[frameRateListIndex];
             }
