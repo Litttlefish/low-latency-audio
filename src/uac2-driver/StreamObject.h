@@ -141,7 +141,8 @@ class StreamObject
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     void ResetNextMeasureFrames(
-        _In_ LONG measureFrames
+        _In_ LONG inputMeasureFrames,
+        _In_ LONG outputMeasureFrames
     );
 
     __drv_maxIRQL(PASSIVE_LEVEL)
@@ -277,8 +278,9 @@ class StreamObject
     __drv_maxIRQL(DISPATCH_LEVEL)
     NONPAGED_CODE_SEG
     ULONG UpdatePositionsFeedback(
-        _In_ ULONG feedbackSum,
-        _In_ ULONG validFeedback
+        _In_ TransferObject * transferObject,
+        _In_ ULONG            feedbackSum,
+        _In_ ULONG            validFeedback
     );
 
     __drv_maxIRQL(DISPATCH_LEVEL)

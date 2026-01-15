@@ -175,7 +175,7 @@ TransferObject::SetUrbIsochronousParametersInput(
     NTSTATUS              status = STATUS_SUCCESS;
     WDF_OBJECT_ATTRIBUTES attributes;
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry, startFrame = %u, NumPackets = %u, PacketSize = %u, maxXferSize = %u, m_index = %u", startFrame, m_numIsoPackets, m_isoPacketSize, m_maxXferSize, m_index);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry, startFrame = %u, asap = %!bool!, NumPackets = %u, PacketSize = %u, maxXferSize = %u, m_index = %u", startFrame, asap, m_numIsoPackets, m_isoPacketSize, m_maxXferSize, m_index);
 
     auto setUrbIsochronousParametersInScope = wil::scope_exit([&]() {
         if (!NT_SUCCESS(status))
@@ -309,14 +309,6 @@ TransferObject::SetUrbIsochronousParametersInput(
         // TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, "old UrbIsochronousTransfer.NumberOfPackets      = %u", numberOfPackets);
     }
 
-    ULONG samplesPerIrp = (m_deviceContext->AudioProperty.SampleRate * m_deviceContext->ClassicFramesPerIrp) / 1000;
-    ULONG samplesPerPacket = 0;
-    ULONG extraSamples = 0;
-
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - samplesPerIrp    = %u", samplesPerIrp);
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - samplesPerPacket = %u", samplesPerPacket);
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - extraSamples     = %u", extraSamples);
-
     m_urb->UrbIsochronousTransfer.StartFrame = startFrame;
     m_urb->UrbIsochronousTransfer.Hdr.Length = (USHORT)siz;
     m_urb->UrbIsochronousTransfer.Hdr.Function = URB_FUNCTION_ISOCH_TRANSFER;
@@ -362,7 +354,7 @@ TransferObject::SetUrbIsochronousParametersOutput(
     NTSTATUS              status = STATUS_SUCCESS;
     WDF_OBJECT_ATTRIBUTES attributes;
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry, startFrame = %u, NumPackets = %u, PacketSize = %u, maxXferSize = %u, m_index = %u", startFrame, m_numIsoPackets, m_isoPacketSize, m_maxXferSize, m_index);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry, startFrame = %u, asap = %!bool!, NumPackets = %u, PacketSize = %u, maxXferSize = %u, m_index = %u", startFrame, asap, m_numIsoPackets, m_isoPacketSize, m_maxXferSize, m_index);
 
     auto setUrbIsochronousParametersOutScope = wil::scope_exit([&]() {
         if (!NT_SUCCESS(status))
@@ -494,17 +486,6 @@ TransferObject::SetUrbIsochronousParametersOutput(
         // TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, "old UrbIsochronousTransfer.NumberOfPackets      = %u", numberOfPackets);
     }
 
-    ULONG samplesPerIrp = (m_deviceContext->AudioProperty.SampleRate * m_deviceContext->ClassicFramesPerIrp) / 1000;
-    ULONG samplesPerPacket = 0;
-    ULONG extraSamples = 0;
-
-    samplesPerPacket = samplesPerIrp / m_numIsoPackets;
-    extraSamples = samplesPerIrp - samplesPerPacket * m_numIsoPackets;
-
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - samplesPerIrp    = %u", samplesPerIrp);
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - samplesPerPacket = %u", samplesPerPacket);
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - extraSamples     = %u", extraSamples);
-
     m_urb->UrbIsochronousTransfer.StartFrame = startFrame;
     m_urb->UrbIsochronousTransfer.Hdr.Length = (USHORT)siz;
     m_urb->UrbIsochronousTransfer.Hdr.Function = URB_FUNCTION_ISOCH_TRANSFER;
@@ -552,7 +533,7 @@ TransferObject::SetUrbIsochronousParametersFeedback(
     NTSTATUS              status = STATUS_SUCCESS;
     WDF_OBJECT_ATTRIBUTES attributes;
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry, startFrame = %u, NumPackets = %u, PacketSize = %u, maxXferSize = %u, m_index = %u", startFrame, m_numIsoPackets, m_isoPacketSize, m_maxXferSize, m_index);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry, startFrame = %u, asap = %!bool!, NumPackets = %u, PacketSize = %u, maxXferSize = %u, m_index = %u", startFrame, asap, m_numIsoPackets, m_isoPacketSize, m_maxXferSize, m_index);
 
     auto setUrbIsochronousParametersFeedbackScope = wil::scope_exit([&]() {
         if (!NT_SUCCESS(status))
@@ -684,14 +665,6 @@ TransferObject::SetUrbIsochronousParametersFeedback(
         // TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, "old UrbIsochronousTransfer.TransferBufferLength = %u", TotalLength);
         // TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, "old UrbIsochronousTransfer.NumberOfPackets      = %u", numberOfPackets);
     }
-
-    ULONG samplesPerIrp = (m_deviceContext->AudioProperty.SampleRate * m_deviceContext->ClassicFramesPerIrp) / 1000;
-    ULONG samplesPerPacket = 0;
-    ULONG extraSamples = 0;
-
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - samplesPerIrp    = %u", samplesPerIrp);
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - samplesPerPacket = %u", samplesPerPacket);
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - extraSamples     = %u", extraSamples);
 
     m_urb->UrbIsochronousTransfer.StartFrame = startFrame;
     m_urb->UrbIsochronousTransfer.Hdr.Length = (USHORT)siz;
@@ -1035,28 +1008,39 @@ TransferObject::UpdateTransferredBytesInThisIrp(ULONG & transferredBytesInThisIr
                     ULONG length = m_urb->UrbIsochronousTransfer.IsoPacket[i].Length;
                     transferredBytesInThisIrp += length;
                     // Detect when a sample ends in the middle of a packet.
-                    if (((length % (m_deviceContext->AudioProperty.InputBytesPerBlock) != 0) || (((length < m_deviceContext->AudioProperty.InputBytesPerBlock * (m_deviceContext->AudioProperty.SamplesPerPacket - 1)) ||
-                                                                                                  (length > m_deviceContext->AudioProperty.InputBytesPerBlock * (m_deviceContext->AudioProperty.SamplesPerPacket + 1))))))
+                    if (((length % (m_deviceContext->InputProperty.BytesPerBlock) != 0) || (((length < m_deviceContext->InputProperty.BytesPerBlock * (m_deviceContext->InputProperty.SamplesPerPacket - 1)) ||
+                                                                                             (length > m_deviceContext->InputProperty.BytesPerBlock * (m_deviceContext->InputProperty.SamplesPerPacket + 1))))))
                     {
                         if (m_lockDelayCount == 0)
                         {
-                            TraceEvents(TRACE_LEVEL_ERROR, TRACE_DEVICE, "in frame %u iso packet %d : invalid length %u bytes, in %u bytes per sample, %u samples per packet", m_urb->UrbIsochronousTransfer.StartFrame, i, length, m_deviceContext->AudioProperty.InputBytesPerBlock, m_deviceContext->AudioProperty.SamplesPerPacket);
-                            if (invalidPacket != nullptr)
+                            if (length != 0)
                             {
-                                ++(*invalidPacket);
+                                TraceEvents(TRACE_LEVEL_ERROR, TRACE_DEVICE, "in frame %u iso packet %d : invalid length %u bytes, in %u bytes per sample, %u samples per packet", m_urb->UrbIsochronousTransfer.StartFrame, i, length, m_deviceContext->InputProperty.BytesPerBlock, m_deviceContext->InputProperty.SamplesPerPacket);
+
+                                if (invalidPacket != nullptr)
+                                {
+                                    ++(*invalidPacket);
+                                }
+                                // SPEC-COMPLIANT: No error handling needed for now - may be revisited if requirements change
                             }
-                            // SPEC-COMPLIANT: No error handling needed for now - may be revisited if requirements change
+                            else
+                            {
+                                TraceEvents(TRACE_LEVEL_WARNING, TRACE_DEVICE, "in frame %u iso packet %d : zero length, in %u bytes per sample, %u samples per packet", m_urb->UrbIsochronousTransfer.StartFrame, i, m_deviceContext->InputProperty.BytesPerBlock, m_deviceContext->InputProperty.SamplesPerPacket);
+                            }
                         }
                         else
                         {
                             TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, "in frame %u iso packet %d : invalid length %u bytes , LOCK DELAY ENABLE", m_urb->UrbIsochronousTransfer.StartFrame, i, length);
                         }
                     }
-                    // detecting sampling rate
-                    bool updated = m_streamObject->CalculateSampleRate(TRUE, m_deviceContext->AudioProperty.InputBytesPerBlock, m_deviceContext->AudioProperty.PacketsPerSec, length, m_deviceContext->AudioProperty.InputMeasuredSampleRate);
-                    if (updated)
+                    if (length != 0)
                     {
-                        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - InputMeasuredSampleRate = %d", m_deviceContext->AudioProperty.InputMeasuredSampleRate);
+                        // detecting sampling rate
+                        bool updated = m_streamObject->CalculateSampleRate(TRUE, m_deviceContext->InputProperty.BytesPerBlock, m_deviceContext->InputProperty.PacketsPerSec, length, m_deviceContext->InputProperty.MeasuredSampleRate);
+                        if (updated)
+                        {
+                            TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - InputMeasuredSampleRate = %d", m_deviceContext->InputProperty.MeasuredSampleRate);
+                        }
                     }
                 }
             }
@@ -1085,10 +1069,10 @@ TransferObject::UpdateTransferredBytesInThisIrp(ULONG & transferredBytesInThisIr
 
                     // detecting sampling rate
                     ULONG length = m_urb->UrbIsochronousTransfer.IsoPacket[i].Length;
-                    bool  updated = m_streamObject->CalculateSampleRate(FALSE, m_deviceContext->AudioProperty.OutputBytesPerBlock, m_deviceContext->AudioProperty.PacketsPerSec, length, m_deviceContext->AudioProperty.OutputMeasuredSampleRate);
+                    bool  updated = m_streamObject->CalculateSampleRate(FALSE, m_deviceContext->OutputProperty.BytesPerBlock, m_deviceContext->OutputProperty.PacketsPerSec, length, m_deviceContext->OutputProperty.MeasuredSampleRate);
                     if (updated)
                     {
-                        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - OutputMeasuredSampleRate = %d", m_deviceContext->AudioProperty.OutputMeasuredSampleRate);
+                        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - OutputMeasuredSampleRate = %d", m_deviceContext->OutputProperty.MeasuredSampleRate);
                     }
                 }
             }

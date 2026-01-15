@@ -329,10 +329,10 @@ CUSBAsio::~CUSBAsio()
 _Use_decl_annotations_
 void CUSBAsio::getDriverName(char * name)
 {
-	// 
-	// name uses multibyte character sets,
-	// so sprintf_s is used.
-	// 
+    //
+    // name uses multibyte character sets,
+    // so sprintf_s is used.
+    //
     strcpy_s(name, DRIVER_NAME_LENGTH, DRIVER_NAME_8b);
 }
 
@@ -688,10 +688,10 @@ ASIOError CUSBAsio::getClockSources(ASIOClockSource * clocks, long * numSources)
             clocks[i].associatedGroup = -1;
             clocks[i].isCurrentSource = clockInfo->ClockSource[i].IsCurrentSource ? ASIOTrue : ASIOFalse;
 
-			// 
-			// ASIOClockSource::name uses multibyte character sets,
-			// so sprintf_s is used.
-			// 
+            //
+            // ASIOClockSource::name uses multibyte character sets,
+            // so sprintf_s is used.
+            //
             sprintf_s(clocks[i].name, CLOCK_SOURCE_NAME_LENGTH, "%S", clockInfo->ClockSource[i].Name);
         }
         *numSources = clockInfo->NumClockSource;
@@ -833,10 +833,10 @@ ASIOError CUSBAsio::getChannelInfo(ASIOChannelInfo * info)
             }
         }
 
-		// 
-		// ASIOChannelInfo::name uses multibyte character sets,
-		// so sprintf_s is used.
-		// 
+        //
+        // ASIOChannelInfo::name uses multibyte character sets,
+        // so sprintf_s is used.
+        //
         if (ch == m_channelInfo->NumChannels)
         {
             sprintf_s(info->name, DRIVER_NAME_LENGTH, "channel %u", info->channel);
@@ -1486,7 +1486,7 @@ bool CUSBAsio::GetLatency()
     {
         return result;
     }
-    
+
     info_print_(_T("latency is in:%d, out:%d samples.\n"), m_inputLatency, m_outputLatency);
 
     return result;
@@ -1544,7 +1544,7 @@ bool CUSBAsio::GetDesiredPath()
         m_desiredPath = nullptr;
     }
 
-    WCHAR      asioDevice[MAX_PATH];
+    WCHAR      asioDevice[MAX_PATH] = {0};
     bool       isSuccess = false;
     KSPROPERTY privateProperty{};
     ULONG      bytesReturned = 0;
@@ -1567,7 +1567,6 @@ bool CUSBAsio::GetDesiredPath()
     {
         return isSuccess;
     }
-
 
     m_desiredPath = new TCHAR[MAX_PATH];
 

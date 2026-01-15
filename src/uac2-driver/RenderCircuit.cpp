@@ -190,16 +190,16 @@ static ACX_PROPERTY_ITEM s_PropertyItems[] = {
         EvtUSBAudioAcxDriverGetInputLatency,              // PFN_ACX_OBJECT_PROCESS_REQUEST EvtAcxObjectProcessRequest;
         0,                                                // PVOID Reserved;
         0,                                                // ULONG ControlCb;
-        sizeof(LONG),                                         // ULONG ValueCb;
+        sizeof(LONG),                                     // ULONG ValueCb;
     },
     {
         &KSPROPSETID_LowLatencyAudio,                     // const GUID * Set;
         toInt(KsPropertyUACLowLatencyAudio::GetOutputLatency),
         ACX_PROPERTY_ITEM_FLAG_GET,                       // ULONG Flags;
-        EvtUSBAudioAcxDriverGetOutputLatency,              // PFN_ACX_OBJECT_PROCESS_REQUEST EvtAcxObjectProcessRequest;
+        EvtUSBAudioAcxDriverGetOutputLatency,             // PFN_ACX_OBJECT_PROCESS_REQUEST EvtAcxObjectProcessRequest;
         0,                                                // PVOID Reserved;
         0,                                                // ULONG ControlCb;
-        sizeof(LONG),                                         // ULONG ValueCb;
+        sizeof(LONG),                                     // ULONG ValueCb;
     },
     {
         &KSPROPSETID_LowLatencyAudio,                     // const GUID * Set;
@@ -1024,7 +1024,7 @@ Return Value:
             // Create Device Bridge Pin.
             //
             ACX_PIN_CALLBACKS_INIT(&pinCallbacks);
-            if (deviceContext->OutputChannelNames != USBAudioConfiguration::InvalidString)
+            if (deviceContext->OutputProperty.ChannelNames != USBAudioConfiguration::InvalidString)
             {
                 pinCallbacks.EvtAcxPinRetrieveName = CodecR_EvtAcxPinRetrieveName;
             }
@@ -1041,7 +1041,7 @@ Return Value:
             // the name of EvtAcxPinRetrieveName is valid, change it to
             // KSNODETYPE_LINE_CONNECTOR.
             //
-            if (IsEqualGUID(*ConvertTerminalType(terminalType), KSNODETYPE_SPEAKER) && (deviceContext->OutputChannelNames != USBAudioConfiguration::InvalidString))
+            if (IsEqualGUID(*ConvertTerminalType(terminalType), KSNODETYPE_SPEAKER) && (deviceContext->OutputProperty.ChannelNames != USBAudioConfiguration::InvalidString))
             {
                 pinCfg.Category = &KSNODETYPE_LINE_CONNECTOR;
             }
@@ -1102,7 +1102,7 @@ Return Value:
             RETURN_NTSTATUS_IF_FAILED(AcxPinAddJacks(pins[index * CodecRenderPinCount + CodecRenderBridgePin], &jack, 1));
         }
 
-        if (deviceContext->UsbAudioConfiguration->hasOutputIsochronousInterface())
+        if (deviceContext->UsbAudioConfiguration->HasOutputIsochronousInterface())
         {
             RETURN_NTSTATUS_IF_FAILED(Render_AllocateSupportedFormats(Device, pins[index * CodecRenderPinCount + CodecRenderHostPin], circuit, SupportedSampleRate, numOfChannelsPerDevice, usbAudioDataFormatManager));
         }

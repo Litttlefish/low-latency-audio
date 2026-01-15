@@ -112,11 +112,11 @@ ContiguousMemory::Allocate(
     TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DEVICE, " - this, m_contiguousMemory, %p, %p", this, m_contiguousMemory);
     for (ULONG direction = 0; direction < toULONG(IsoDirection::NumOfIsoDirection); ++direction)
     {
-        if ((static_cast<IsoDirection>(direction) == IsoDirection::In) && !usbAudioConfiguration->hasInputIsochronousInterface())
+        if ((static_cast<IsoDirection>(direction) == IsoDirection::In) && !usbAudioConfiguration->HasInputIsochronousInterface())
         {
             continue;
         }
-        if ((static_cast<IsoDirection>(direction) == IsoDirection::Out) && !usbAudioConfiguration->hasOutputIsochronousInterface())
+        if ((static_cast<IsoDirection>(direction) == IsoDirection::Out) && !usbAudioConfiguration->HasOutputIsochronousInterface())
         {
             continue;
         }

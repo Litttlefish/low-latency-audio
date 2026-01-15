@@ -83,8 +83,8 @@ constexpr ULONG toULong(UACSampleFormat sampleFormat)
 }
 
 // User - Kernel For version check
-#define UAC_KERNEL_DRIVER_VERSION 0x00020000
-#define UAC_ASIO_DRIVER_VERSION   0x00020000
+#define UAC_KERNEL_DRIVER_VERSION 0x00030000
+#define UAC_ASIO_DRIVER_VERSION   0x00030000
 
 enum class DeviceStatuses
 {
@@ -177,54 +177,25 @@ constexpr int toInt(UACSampleType sampleType)
 
 typedef struct _UAC_AUDIO_PROPERTY
 {
-    USHORT VendorId;                                 // Vendor ID obtained from USB
-    USHORT ProductId;                                // Product ID obtained from USB
-    USHORT DeviceRelease;                            // Device Release Number obtained from USB
-    ULONG  PacketsPerSec;                            // ISO (Micro) Frames per second
-    WCHAR  ProductName[UAC_MAX_PRODUCT_NAME_LENGTH]; // iProduct string obtained from USB
-    ULONG  SampleRate;                               // Current sampling frequency
-    ULONG  SamplesPerPacket;                         // Number of samples per ISO Frame (truncated)
-    ULONG  SupportedSampleRate;                      // Supported sampling frequencies (bitmask)
-    ULONG  AsioDriverVersion;                        // Current ASIO driver version
-    ULONG  AsioBufferPeriod;                         // ASIO buffer size
-
-    UACSampleType   SampleType;                      // Sample type (ASIO compliant)
-    ULONG           SupportedSampleFormats;          //
-    UACSampleFormat CurrentSampleFormat;             //
-
-    ULONG          InputAsioChannels;                // Number of input channels
-    UCHAR          InputInterfaceNumber;             // Currently selected input interface number
-    UCHAR          InputAlternateSetting;            // Currently selected input alternate setting number
-    UCHAR          InputEndpointNumber;              // Currently selected input endpoint number
-    ULONG          InputBytesPerBlock;               // Bytes per block for input (usually InChannels * BytesPerSample)
-    ULONG          InputMaxSamplesPerPacket;         // Number of frames transferable per microframe for input
-    LONG           InputLatencyOffset;               // Input latency compensation
-    ULONG          InputFormatType;
-    ULONG          InputFormat;
-    ULONG          InputBytesPerSample;              // Bytes per sample
-    ULONG          InputValidBitsPerSample;          // Valid bits per sample
-    volatile ULONG InputMeasuredSampleRate;          // Measured input sampling rate (1-second average)
-    ULONG          InputDeviceLatency;
-    ULONG          InputDriverBuffer;                //
-
-    ULONG          OutputAsioChannels;               // Number of output channels
-    UCHAR          OutputInterfaceNumber;            // Currently selected output interface number
-    UCHAR          OutputAlternateSetting;           // Currently selected output alternate setting number
-    UCHAR          OutputEndpointNumber;             // Currently selected output endpoint number
-    ULONG          OutputFormatType;
-    ULONG          OutputFormat;
-    ULONG          OutputBytesPerBlock;              // Bytes per block for output (usually OutChannels * BytesPerSample)
-    ULONG          OutputMaxSamplesPerPacket;        // Number of frames transferable per microframe for output
-    LONG           OutputLatencyOffset;              // Output latency compensation
-    ULONG          OutputBytesPerSample;             // Bytes per sample
-    ULONG          OutputValidBitsPerSample;         // Valid bits per sample
-    volatile ULONG OutputMeasuredSampleRate;         // Measured output sampling rate (1-second average)
-    ULONG          OutputDeviceLatency;
-    ULONG          OutputDriverBuffer;               //
-
-    UCHAR   AudioControlInterfaceNumber;             // Audio Control interface number
-    ULONG   ClockSources;                            //
-    BOOLEAN IsAccessible;
+    USHORT          VendorId;                                 // Vendor ID obtained from USB
+    USHORT          ProductId;                                // Product ID obtained from USB
+    USHORT          DeviceRelease;                            // Device Release Number obtained from USB
+    WCHAR           ProductName[UAC_MAX_PRODUCT_NAME_LENGTH]; // iProduct string obtained from USB
+    ULONG           SampleRate;                               // Current sampling frequency
+    ULONG           SupportedSampleRate;                      // Supported sampling frequencies (bit mask)
+    ULONG           AsioDriverVersion;                        // Current ASIO driver version
+    ULONG           AsioBufferPeriod;                         // ASIO buffer size
+    UACSampleType   SampleType;                               // Sample type (ASIO compliant)
+    ULONG           SupportedSampleFormats;                   //
+    UACSampleFormat CurrentSampleFormat;                      //
+    ULONG           InputAsioChannels;                        // Number of input channels
+    LONG            InputLatencyOffset;                       // Input latency compensation
+    ULONG           InputDriverBuffer;                        //
+    ULONG           OutputAsioChannels;                       // Number of output channels
+    LONG            OutputLatencyOffset;                      // Output latency compensation
+    ULONG           OutputDriverBuffer;                       //
+    ULONG           ClockSources;                             //
+    BOOLEAN         IsAccessible;
 } UAC_AUDIO_PROPERTY, *PUAC_AUDIO_PROPERTY;
 
 typedef struct UAC_CHANNEL_INFO_

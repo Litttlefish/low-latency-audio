@@ -6,8 +6,6 @@
 // Further information: https://aka.ms/asio
 // ============================================================================
 
-
-
 /*++
 
 Module Name:
@@ -747,7 +745,7 @@ NTSTATUS ControlRequestGetSampleFrequency(
     PAGED_CODE();
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = GetCurrentSetting(
         deviceContext,
@@ -774,7 +772,7 @@ NTSTATUS ControlRequestSetSampleFrequency(
     PAGED_CODE();
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = SetCurrentSetting(
         deviceContext,
@@ -802,7 +800,7 @@ NTSTATUS ControlRequestGetSampleFrequencyRange(
     PAGED_CODE();
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = GetRangeWithAllocate(
         deviceContext->UsbDevice,
@@ -831,7 +829,7 @@ NTSTATUS ControlRequestGetClockSelector(
     PAGED_CODE();
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = GetCurrentSetting(
         deviceContext,
@@ -858,7 +856,7 @@ NTSTATUS ControlRequestSetClockSelector(
     PAGED_CODE();
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = SetCurrentSetting(
         deviceContext,
@@ -867,6 +865,60 @@ NTSTATUS ControlRequestSetClockSelector(
         NS_USBAudio0200::CX_CLOCK_SELECTOR_CONTROL,
         0,
         clockSelectorIndex
+    );
+
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!", status);
+    return status;
+}
+
+PAGED_CODE_SEG
+_Use_decl_annotations_
+NTSTATUS ControlRequestGetSelector(
+    PDEVICE_CONTEXT deviceContext,
+    UCHAR           interfaceNumber,
+    UCHAR           entityID,
+    UCHAR &         selectorIndex
+)
+{
+    PAGED_CODE();
+
+    RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
+
+    NTSTATUS status = GetCurrentSetting(
+        deviceContext,
+        interfaceNumber,
+        entityID,
+        NS_USBAudio0200::SU_SELECTOR_CONTROL,
+        0,
+        selectorIndex
+    );
+
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!", status);
+    return status;
+}
+
+PAGED_CODE_SEG
+_Use_decl_annotations_
+NTSTATUS ControlRequestSetSelector(
+    PDEVICE_CONTEXT deviceContext,
+    UCHAR           interfaceNumber,
+    UCHAR           entityID,
+    UCHAR           selectorIndex
+)
+{
+    PAGED_CODE();
+
+    RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
+
+    NTSTATUS status = SetCurrentSetting(
+        deviceContext,
+        interfaceNumber,
+        entityID,
+        NS_USBAudio0200::SU_SELECTOR_CONTROL,
+        0,
+        selectorIndex
     );
 
     TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!", status);
@@ -885,7 +937,7 @@ ControlRequestGetACTValAltSettingsControl(
     PAGED_CODE();
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = GetCurrentSetting(
         deviceContext,
@@ -917,7 +969,7 @@ ControlRequestGetACTAltSettingsControl(
     PAGED_CODE();
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     activeAlternateSetting = 0;
 
@@ -948,7 +1000,7 @@ NTSTATUS ControlRequestGetAudioDataFormat(
 {
     PAGED_CODE();
 
-    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = GetCurrentSetting(
         deviceContext,
@@ -973,7 +1025,7 @@ NTSTATUS ControlRequestSetAudioDataFormat(
 {
     PAGED_CODE();
 
-    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = SetCurrentSetting(
         deviceContext,
@@ -1002,7 +1054,7 @@ NTSTATUS ControlRequestGetMute(
     PAGED_CODE();
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = GetCurrentSetting(
         deviceContext,
@@ -1041,7 +1093,7 @@ NTSTATUS ControlRequestSetMute(
     PAGED_CODE();
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = SetCurrentSetting(
         deviceContext,
@@ -1069,7 +1121,7 @@ NTSTATUS ControlRequestGetVolume(
     PAGED_CODE();
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = GetCurrentSetting(
         deviceContext,
@@ -1097,7 +1149,7 @@ NTSTATUS ControlRequestSetVolume(
     PAGED_CODE();
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = SetCurrentSetting(
         deviceContext,
@@ -1126,7 +1178,7 @@ NTSTATUS ControlRequestGetVolumeRange(
     PAGED_CODE();
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = GetRangeWithAllocate(
         deviceContext->UsbDevice,
@@ -1157,7 +1209,7 @@ NTSTATUS ControlRequestGetAutoGainControl(
     PAGED_CODE();
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = GetCurrentSetting(
         deviceContext,
@@ -1194,7 +1246,7 @@ NTSTATUS ControlRequestSetAutoGainControl(
 
     PAGED_CODE();
 
-    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = SetCurrentSetting(
         deviceContext,
@@ -1223,7 +1275,7 @@ ControlRequestSetSampleRate(
     PAGED_CODE();
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = ControlRequest(
         deviceContext,
@@ -1257,7 +1309,7 @@ ControlRequestGetSampleRate(
     PAGED_CODE();
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
-    RETURN_NTSTATUS_IF_TRUE(deviceContext->UsbAudioConfiguration->isUSBAudio2(), STATUS_NOT_SUPPORTED);
+    RETURN_NTSTATUS_IF_TRUE(deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
     NTSTATUS status = ControlRequest(
         deviceContext,

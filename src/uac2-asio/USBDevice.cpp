@@ -303,7 +303,6 @@ BOOL SetClockSource(
     return result;
 }
 
-
 _Use_decl_annotations_
 BOOL SetSampleFormat(
     HANDLE deviceHandle,
@@ -469,7 +468,7 @@ BOOL GetPeriodFrames(
     KSPROPERTY privateProperty{};
     ULONG      bytesReturned = 0;
 
-    if (periodFrames == NULL)
+    if (periodFrames == nullptr)
     {
         return result;
     }

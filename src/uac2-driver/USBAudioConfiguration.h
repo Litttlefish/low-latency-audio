@@ -48,6 +48,7 @@ typedef struct _CURRENT_SETTINGS
     ULONG LockDelay{0};
     ULONG MaxFramesPerPacket{0};
     ULONG MaxPacketSize{0};
+    ULONG Interval{0};
     // ULONG AltSupportedSampleRate{0};
     UCHAR TerminalLink{0};
     // UCHAR SamplePerFrame{0};
@@ -349,6 +350,10 @@ class USBAudioInterface
 
     virtual bool IsControlInterface() = 0;
 
+    virtual ULONG GetNumOfClockSources() = 0;
+
+    virtual ULONG GetClockEntityCountForTerminal() = 0;
+
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     virtual PUSB_INTERFACE_DESCRIPTOR & GetInterfaceDescriptor();
@@ -436,7 +441,15 @@ class USBAudioControlInterface : public USBAudioInterface
         _In_ const NS_USBAudio::PCS_GENERIC_AUDIO_DESCRIPTOR descriptor
     ) = 0;
 
+    virtual NTSTATUS ReconnectClockAll(
+        _In_ PDEVICE_CONTEXT deviceContext
+    ) = 0;
+
     virtual NTSTATUS QueryRangeAttributeAll(
+        _In_ PDEVICE_CONTEXT deviceContext
+    ) = 0;
+
+    virtual NTSTATUS SetDefaultAttributeAll(
         _In_ PDEVICE_CONTEXT deviceContext
     ) = 0;
 
@@ -514,6 +527,14 @@ class USBAudioStreamInterface : public USBAudioInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
+    virtual ULONG GetNumOfClockSources();
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    virtual ULONG GetClockEntityCountForTerminal();
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
     virtual bool IsInterfaceSupportingFormats() = 0;
 
     virtual NTSTATUS CheckInterfaceConfiguration(
@@ -551,6 +572,10 @@ class USBAudioStreamInterface : public USBAudioInterface
     virtual UCHAR GetValidBitsPerSample() = 0;
 
     virtual UCHAR GetBytesPerSample() = 0;
+
+    virtual UCHAR GetIntervalForDirection(
+        _In_ bool isInput
+    ) = 0;
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
@@ -662,6 +687,20 @@ class USBAudio1ControlInterface : public USBAudioControlInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
+    virtual ULONG GetNumOfClockSources();
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    virtual ULONG GetClockEntityCountForTerminal();
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    virtual NTSTATUS ReconnectClockAll(
+        _In_ PDEVICE_CONTEXT deviceContext
+    );
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
     virtual NTSTATUS QueryCurrentAttributeAll(
         _In_ PDEVICE_CONTEXT deviceContext
     );
@@ -669,6 +708,12 @@ class USBAudio1ControlInterface : public USBAudioControlInterface
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     virtual NTSTATUS QueryRangeAttributeAll(
+        _In_ PDEVICE_CONTEXT deviceContext
+    );
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    virtual NTSTATUS SetDefaultAttributeAll(
         _In_ PDEVICE_CONTEXT deviceContext
     );
 
@@ -817,6 +862,12 @@ class USBAudio1StreamInterface : public USBAudioStreamInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
+    virtual UCHAR GetIntervalForDirection(
+        _In_ bool isInput
+    );
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
     virtual bool HasInputIsochronousEndpoint();
 
     __drv_maxIRQL(PASSIVE_LEVEL)
@@ -943,6 +994,20 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
+    virtual ULONG GetNumOfClockSources();
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    virtual ULONG GetClockEntityCountForTerminal();
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    virtual NTSTATUS ReconnectClockAll(
+        _In_ PDEVICE_CONTEXT deviceContext
+    );
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
     virtual NTSTATUS QueryCurrentAttributeAll(
         _In_ PDEVICE_CONTEXT deviceContext
     );
@@ -950,6 +1015,12 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     virtual NTSTATUS QueryRangeAttributeAll(
+        _In_ PDEVICE_CONTEXT deviceContext
+    );
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    virtual NTSTATUS SetDefaultAttributeAll(
         _In_ PDEVICE_CONTEXT deviceContext
     );
 
@@ -1056,9 +1127,23 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
+    NTSTATUS SetDefaultFeatureUnit(
+        _In_ PDEVICE_CONTEXT deviceContext
+    );
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    NTSTATUS GetClockSourceIDFromTerminal(
+        _In_ bool     isInput,
+        _In_ UCHAR    terminalLink,
+        _Out_ UCHAR & clockSourceID
+    );
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
     NTSTATUS GetCurrentClockSourceID(
         _In_ PDEVICE_CONTEXT deviceContext,
-        _Out_ UCHAR &        clockID
+        _Inout_ UCHAR &      clockID
     );
 
     __drv_maxIRQL(PASSIVE_LEVEL)
@@ -1085,7 +1170,7 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    NTSTATUS USBAudio2ControlInterface::SearchOutputTerminal(
+    NTSTATUS SearchOutputTerminal(
         _Inout_ UCHAR &  sourceID,
         _Inout_ UCHAR &  numOfChannels,
         _Inout_ USHORT & terminalType,
@@ -1094,18 +1179,27 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
         _In_ SCHAR       recursionCount
     );
 
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    void RecordClockEntity(
+        _In_ UCHAR bCSourceID
+    );
+
     enum
     {
+        MAX_CLOCK_SELECTOR = 10,
         MAX_TERMINAL = 10,
         MAX_FEATURE_UNIT = 10
     };
 
     // NS_USBAudio0200::PCS_AC_INTERFACE_HEADER_DESCRIPTOR m_interfaceDescriptor{nullptr};
-    NS_USBAudio0200::PCS_AC_CLOCK_SELECTOR_DESCRIPTOR                                    m_clockSelectorDescriptor{nullptr};
+    VariableArray<NS_USBAudio0200::PCS_AC_CLOCK_SELECTOR_DESCRIPTOR, MAX_CLOCK_SELECTOR> m_acClockSelectorInfo;
     VariableArray<NS_USBAudio0200::PCS_AC_CLOCK_SOURCE_DESCRIPTOR, UAC_MAX_CLOCK_SOURCE> m_acClockSourceInfo;
     VariableArray<NS_USBAudio0200::PCS_AC_OUTPUT_TERMINAL_DESCRIPTOR, MAX_TERMINAL>      m_acOutputTerminalInfo;
     VariableArray<NS_USBAudio0200::PCS_AC_INPUT_TERMINAL_DESCRIPTOR, MAX_TERMINAL>       m_acInputTerminalInfo;
     VariableArray<NS_USBAudio0200::PCS_AC_FEATURE_UNIT_DESCRIPTOR, MAX_FEATURE_UNIT>     m_acFeatureUnitInfo;
+    ULONG                                                                                m_clockEntityBitMap[4]{};
+    ULONG                                                                                m_clockEntityCount{0};
 };
 
 class USBAudio2StreamInterface : public USBAudioStreamInterface
@@ -1195,6 +1289,12 @@ class USBAudio2StreamInterface : public USBAudioStreamInterface
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     virtual UCHAR GetBytesPerSample();
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    virtual UCHAR GetIntervalForDirection(
+        _In_ bool isInput
+    );
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
@@ -1316,6 +1416,20 @@ class USBAudioInterfaceInfo
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
+    ULONG GetNumOfClockSources();
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    ULONG GetClockEntityCountForTerminal();
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    NTSTATUS ReconnectClockAll(
+        _In_ PDEVICE_CONTEXT deviceContext
+    );
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
     NTSTATUS QueryCurrentAttributeAll(
         _In_ PDEVICE_CONTEXT deviceContext
     );
@@ -1323,6 +1437,12 @@ class USBAudioInterfaceInfo
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     NTSTATUS QueryRangeAttributeAll(
+        _In_ PDEVICE_CONTEXT deviceContext
+    );
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    NTSTATUS SetDefaultAttributeAll(
         _In_ PDEVICE_CONTEXT deviceContext
     );
 
@@ -1607,25 +1727,29 @@ class USBAudioConfiguration
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    bool isInterfaceProtocolUSBAudio2(
+    bool IsInterfaceProtocolUSBAudio2(
         _In_ UCHAR interfaceProtocol
     ) const;
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    bool isUSBAudio2() const;
+    bool IsUSBAudio2() const;
 
     __drv_maxIRQL(DISPATCH_LEVEL)
     NONPAGED_CODE_SEG
-    bool hasInputIsochronousInterface() const;
+    bool HasInputIsochronousInterface() const;
 
     __drv_maxIRQL(DISPATCH_LEVEL)
     NONPAGED_CODE_SEG
-    bool hasOutputIsochronousInterface() const;
+    bool HasOutputIsochronousInterface() const;
 
     __drv_maxIRQL(DISPATCH_LEVEL)
     NONPAGED_CODE_SEG
-    bool hasInputAndOutputIsochronousInterfaces() const;
+    bool HasInputAndOutputIsochronousInterfaces() const;
+
+    __drv_maxIRQL(DISPATCH_LEVEL)
+    NONPAGED_CODE_SEG
+    ULONG GetClockEntityCountForTerminal() const;
 
     static __drv_maxIRQL(DISPATCH_LEVEL)
     PAGED_CODE_SEG
@@ -1768,6 +1892,7 @@ class USBAudioConfiguration
     bool                          m_isUSBAudio2{false};
     bool                          m_isInputIsochronousInterfaceExists{false};
     bool                          m_isOutputIsochronousInterfaceExists{false};
+    ULONG                         m_clockEntityCountForTerminal{0};
     USBAudioDataFormatManager     m_inputUsbAudioDataFormatManager;
     USBAudioDataFormatManager     m_outputUsbAudioDataFormatManager;
 };
