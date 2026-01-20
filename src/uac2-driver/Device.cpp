@@ -6257,7 +6257,7 @@ NTSTATUS StartIsoStream(
     deviceContext->InputProperty.MeasuredSampleRate = deviceContext->AudioProperty.SampleRate;
     deviceContext->OutputProperty.MeasuredSampleRate = deviceContext->AudioProperty.SampleRate;
 
-    status = deviceContext->StreamObject->CreateMixingEngineThread(HIGH_PRIORITY, 1000);
+    status = deviceContext->StreamObject->CreateMixingEngineThread(HIGH_PRIORITY, 100);
     RETURN_NTSTATUS_IF_FAILED(status);
 
     if (deviceContext->RtPacketObject != nullptr)

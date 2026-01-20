@@ -408,9 +408,10 @@ class StreamObject
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     void DeterminePacket(
-        _In_ LONGLONG inCompletedPacket,
-        _In_ ULONG    usbBusTimeDiff,
-        _In_ ULONG    packetsPerIrp
+        _In_ const LONGLONG inCompletedPacket,
+        _In_ const ULONG    usbBusTimeDiff,
+        _In_ const ULONG    packetsPerIrp,
+        _In_ const ULONG    packetsPerMs
     );
 
     __drv_maxIRQL(PASSIVE_LEVEL)
@@ -438,20 +439,25 @@ class StreamObject
     PAGED_CODE_SEG
     bool
     IsInputPacketAtEstimatedPosition(
-        _In_ ULONG inOffset
+        _In_ ULONG inOffsetFrame
     );
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     bool
     IsOutputPacketOverlapWithEstimatePosition(
-        _In_ ULONG inOffset
+        _In_ const ULONG outLimit,
+        _In_ const ULONG inputInterval,
+        _In_ const ULONG outputInterval
     );
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     bool
-    IsOutputPacketAtEstimatedPosition();
+    IsOutputPacketAtEstimatedPosition(
+        _In_ const ULONG inputInterval,
+        _In_ const ULONG outputInterval
+    );
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG

@@ -34,7 +34,7 @@ Trace.h
                             WPP_DEFINE_BIT(FLAG_INIT)                                                                               /* bit  6 = 0x00000040 */ \
                             WPP_DEFINE_BIT(FLAG_DDI)                                                                                /* bit  7 = 0x00000080 */ \
                             WPP_DEFINE_BIT(FLAG_GENERIC)                                                                            /* bit  8 = 0x00000100 */ \
-                            WPP_DEFINE_BIT(TRACE_DRIVER)                                                                            /* bit  GetA9 = 0x00000200 */ \
+                            WPP_DEFINE_BIT(TRACE_DRIVER)                                                                            /* bit  9 = 0x00000200 */ \
                             WPP_DEFINE_BIT(TRACE_DEVICE)                                                                            /* bit 10 = 0x00000400 */ \
                             WPP_DEFINE_BIT(TRACE_QUEUE)                                                                             /* bit 11 = 0x00000800 */ \
                             WPP_DEFINE_BIT(TRACE_CIRCUIT)                                                                           /* bit 12 = 0x00001000 */ \

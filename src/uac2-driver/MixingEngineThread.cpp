@@ -215,18 +215,15 @@ void MixingEngineThread::ThreadMain()
         goto ThreadMain_Exit;
     }
 
-    LARGE_INTEGER maxDueTime;
-    maxDueTime.QuadPart = 0ll - (LONGLONG)m_deviceContext->ClassicFramesPerIrp * 10000LL;
-
-    LARGE_INTEGER duetime;
-    duetime.QuadPart = maxDueTime.QuadPart;
+    LONGLONG duetime = 0ll - (LONGLONG)m_deviceContext->ClassicFramesPerIrp * 10000LL;
+    LONGLONG period = (LONGLONG)m_wakeUpIntervalUs * 10LL;
 
     EXT_SET_PARAMETERS setParameters;
 
     ExInitializeSetTimerParameters(&setParameters);
     setParameters.NoWakeTolerance = 10LL * 10LL;
 
-    ExSetTimer(exTimer, duetime.QuadPart, 100LL * 10LL, &setParameters);
+    ExSetTimer(exTimer, duetime, period, &setParameters);
 
     // ======================================================================
     ASSERT(m_mixingEngineThreadFunction != nullptr);
