@@ -64,8 +64,6 @@ static const UAC_SUPPORTED_CONTROL_LIST g_SupportedControlList[] = {
     {0xffff, 0xffff, 0x0000, 0x0000, true, true, true, false, 5000 /* 5sec */, 3, 1},
 };
 
-static const int g_SupportedControlCount = sizeof(g_SupportedControlList) / sizeof(g_SupportedControlList[0]);
-
 //
 // Latency offsets are defined according to the device's connection status.
 //
@@ -801,7 +799,7 @@ Return Value:
         }
 
         deviceContext->SupportedControl = g_SupportedControlList[0];
-        for (int i = 1; i < g_SupportedControlCount; ++i)
+        for (int i = 1; i < ARRAYSIZE(g_SupportedControlList); ++i)
         {
             if ((g_SupportedControlList[i].VendorId == deviceContext->UsbDeviceDescriptor.idVendor) &&
                 (g_SupportedControlList[i].ProductId == deviceContext->UsbDeviceDescriptor.idProduct) &&
@@ -3756,6 +3754,7 @@ NTSTATUS USBAudioAcxDriverGetCurrentDataFormat(
                 (UCHAR)deviceContext->InputProperty.ValidBitsPerSample,
                 deviceContext->InputProperty.FormatType,
                 deviceContext->InputProperty.Format,
+                false,
                 ksDataFormatWaveFormatExtensible,
                 ksDataFormatWaveFormatExtensibleMemory
             ));
@@ -3777,6 +3776,7 @@ NTSTATUS USBAudioAcxDriverGetCurrentDataFormat(
                 (UCHAR)deviceContext->OutputProperty.ValidBitsPerSample,
                 deviceContext->OutputProperty.FormatType,
                 deviceContext->OutputProperty.Format,
+                false,
                 ksDataFormatWaveFormatExtensible,
                 ksDataFormatWaveFormatExtensibleMemory
             ));
@@ -4305,7 +4305,7 @@ UpdateFramePerIrp(
     }
 
     int bufferSizeIndex = 0;
-    for (; bufferSizeIndex < g_SettingsCount - 1; ++bufferSizeIndex)
+    for (; bufferSizeIndex < (ARRAYSIZE(g_DriverSettingsTable) - 1); ++bufferSizeIndex)
     {
         if (g_DriverSettingsTable[bufferSizeIndex].PeriodFrames == bufferPeriod)
         {
@@ -4341,7 +4341,7 @@ UpdateBufferOperationOffset(
 
     int bufferSizeIndex = 0;
 
-    for (; bufferSizeIndex < g_SettingsCount - 1; ++bufferSizeIndex)
+    for (; bufferSizeIndex < (ARRAYSIZE(g_DriverSettingsTable) - 1); ++bufferSizeIndex)
     {
         if (g_DriverSettingsTable[bufferSizeIndex].PeriodFrames == bufferPeriod)
         {
@@ -6186,7 +6186,7 @@ NTSTATUS StartIsoStream(
         &deviceContext->FeedbackInterfaceAndPipe,
     };
 
-    for (ULONG index = 0; index < (sizeof(interfaceAndPipe) / sizeof(interfaceAndPipe[0])); index++)
+    for (ULONG index = 0; index < ARRAYSIZE(interfaceAndPipe); index++)
     {
         if (interfaceAndPipe[index]->MaximumTransferSize != 0)
         {

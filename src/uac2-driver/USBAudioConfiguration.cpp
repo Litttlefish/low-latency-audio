@@ -6879,10 +6879,10 @@ bool USBAudioConfiguration::IsDeviceSplittable(
     //
     bool isDeviceSplittable = ((GetUSBAudioDataFormatManager(isInput)->GetSupportedSampleFormats() & USBAudioDataFormat::GetSampleFormatsTypeIII()) == 0);
 
-#if 0
+#if 1 //
     if (isDeviceSplittable)
     {
-		isDeviceSplittable = GetClockEntityCountForTerminal() > 1? false: true;
+        isDeviceSplittable = GetClockEntityCountForTerminal() > 1 ? false : true;
     }
 #endif
 

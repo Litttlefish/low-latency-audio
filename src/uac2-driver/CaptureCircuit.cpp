@@ -336,6 +336,7 @@ Capture_AllocateSupportedFormats(
                     validBits,
                     UsbAudioDataFormatManager->GetFormatType(formatIndex),
                     UsbAudioDataFormatManager->GetFormat(formatIndex),
+                    false,
                     ksDataFormatWaveFormatExtensible,
                     ksDataFormatWaveFormatExtensibleMemory
                 );

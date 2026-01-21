@@ -671,6 +671,7 @@ Render_AllocateSupportedFormats(
                     validBits,
                     UsbAudioDataFormatManager->GetFormatType(formatIndex),
                     UsbAudioDataFormatManager->GetFormat(formatIndex),
+                    false,
                     ksDataFormatWaveFormatExtensible,
                     ksDataFormatWaveFormatExtensibleMemory
                 );
@@ -866,7 +867,7 @@ Return Value:
         //
         // Private Property Handler
         //
-        RETURN_NTSTATUS_IF_FAILED(AcxCircuitInitAssignProperties(circuitInit, s_PropertyItems, sizeof(s_PropertyItems) / sizeof(ACX_PROPERTY_ITEM)));
+        RETURN_NTSTATUS_IF_FAILED(AcxCircuitInitAssignProperties(circuitInit, s_PropertyItems, ARRAYSIZE(s_PropertyItems)));
 
         //
         // The driver uses this DDI to create a new ACX circuit.

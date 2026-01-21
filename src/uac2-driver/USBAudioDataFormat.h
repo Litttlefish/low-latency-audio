@@ -157,6 +157,7 @@ class USBAudioDataFormat
         _In_ UCHAR                                   validBits,
         _In_ ULONG                                   formatType,
         _In_ ULONG                                   format,
+        _In_ bool                                    isNoMask,
         _Inout_ PKSDATAFORMAT_WAVEFORMATEXTENSIBLE & ksDataFormatWaveFormatExtensible,
         _Inout_ WDFMEMORY &                          ksDataFormatWaveFormatExtensibleMemory
     );
