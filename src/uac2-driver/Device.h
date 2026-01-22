@@ -250,6 +250,7 @@ typedef struct _DEVICE_CONTEXT
     LONG                               IsIdleStopSucceeded;
     LARGE_INTEGER                      LastVendorRequestTime;
     NTSTATUS                           LastActivationStatus;
+    bool                               IsPrepareHardwareSucceeded;
     WCHAR                              InputAsioChannelName[UAC_MAX_ASIO_CHANNEL][UAC_MAX_CHANNEL_NAME_LENGTH];
     WCHAR                              OutputAsioChannelName[UAC_MAX_ASIO_CHANNEL][UAC_MAX_CHANNEL_NAME_LENGTH];
     bool                               SuperSpeedCompatible;

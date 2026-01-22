@@ -1793,7 +1793,8 @@ _Use_decl_annotations_
 PAGED_CODE_SEG
 NTSTATUS USBAudio2ControlInterface::SetSelectorUnit(const NS_USBAudio::PCS_GENERIC_AUDIO_DESCRIPTOR descriptor)
 {
-    NTSTATUS status = STATUS_SUCCESS;
+    NTSTATUS                                         status = STATUS_SUCCESS;
+    NS_USBAudio0200::PCS_AC_SELECTOR_UNIT_DESCRIPTOR selectorUnitDescriptor = nullptr;
 
     PAGED_CODE();
 
@@ -1801,6 +1802,22 @@ NTSTATUS USBAudio2ControlInterface::SetSelectorUnit(const NS_USBAudio::PCS_GENER
 
     RETURN_NTSTATUS_IF_TRUE(descriptor == nullptr, STATUS_INVALID_PARAMETER);
     RETURN_NTSTATUS_IF_TRUE((descriptor->bDescriptorType != NS_USBAudio0200::CS_INTERFACE) || (descriptor->bDescriptorSubtype != NS_USBAudio0200::SELECTOR_UNIT), STATUS_INVALID_PARAMETER);
+    RETURN_NTSTATUS_IF_TRUE(descriptor->bLength < NS_USBAudio0200::SIZE_OF_MINIMUM_CS_AC_SELECTOR_UNIT_DESCRIPTOR, STATUS_DEVICE_DATA_ERROR);
+
+    selectorUnitDescriptor = (NS_USBAudio0200::PCS_AC_SELECTOR_UNIT_DESCRIPTOR)descriptor;
+
+    if ((descriptor->bLength >= sizeof(NS_USBAudio0200::CS_AC_SELECTOR_UNIT_DESCRIPTOR)) && (descriptor->bDescriptorSubtype == NS_USBAudio0200::SELECTOR_UNIT))
+    {
+        if (selectorUnitDescriptor->bLength >= (sizeof(NS_USBAudio0200::CS_AC_SELECTOR_UNIT_DESCRIPTOR) + sizeof(NS_USBAudio0200::CS_AC_SELECTOR_UNIT_DESCRIPTOR::baSourceID[0]) * (selectorUnitDescriptor->bNrInPins - 1)))
+        {
+            status = m_acSelectorUnitInfo.Append(m_parentObject, selectorUnitDescriptor);
+            TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DESCRIPTOR, " - AC  Selector :  ID 0x%02x", selectorUnitDescriptor->bUnitID);
+        }
+        else
+        {
+            status = STATUS_DEVICE_DATA_ERROR;
+        }
+    }
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Exit %!STATUS!", status);
 
@@ -2439,10 +2456,10 @@ NTSTATUS USBAudio2ControlInterface::SetDefaultFeatureUnit(
                     if (NT_SUCCESS(status))
                     {
                         // const SHORT minusInfinity = static_cast<SHORT>(0x8000);
-                        SHORT targetVolume = 0;
+                        SHORT targetVolume = 0; // 0dB
                         ASSERT(memory != nullptr);
                         ASSERT(parameterBlock != nullptr);
-                        ULONG rangeMax = 1; // parameterBlock->wNumSubRanges;
+                        ULONG rangeMax = 1;     // parameterBlock->wNumSubRanges;
                         for (ULONG rangeIndex = 0; rangeIndex < rangeMax; rangeIndex++)
                         {
                             // SHORT volume = minusInfinity;
@@ -2465,6 +2482,50 @@ NTSTATUS USBAudio2ControlInterface::SetDefaultFeatureUnit(
     }
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Exit %!STATUS!", status);
+    return status;
+}
+
+_Use_decl_annotations_
+PAGED_CODE_SEG
+NTSTATUS USBAudio2ControlInterface::SetDefaultSelectorUnit(
+    PDEVICE_CONTEXT deviceContext
+)
+{
+    NTSTATUS status = STATUS_SUCCESS;
+    UCHAR    sourceID;
+    UCHAR    defaultIndex = 1;
+
+    PAGED_CODE();
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Entry");
+
+    sourceID = USBAudioConfiguration::InvalidID;
+
+    ULONG numOfAcSelectorInfo = m_acSelectorUnitInfo.GetNumOfArray();
+
+    for (ULONG index = 0; index < numOfAcSelectorInfo; index++)
+    {
+        NS_USBAudio0200::PCS_AC_SELECTOR_UNIT_DESCRIPTOR selectorDescriptor = nullptr;
+        if (NT_SUCCESS(m_acSelectorUnitInfo.Get(index, selectorDescriptor)))
+        {
+            UCHAR selectorIndex = 0; // 1 origin
+            RETURN_NTSTATUS_IF_FAILED(ControlRequestGetSelector(deviceContext, GetInterfaceNumber(), selectorDescriptor->bUnitID, selectorIndex));
+            TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DESCRIPTOR, " - bNrInPins %u, selectorIndex %u", selectorDescriptor->bNrInPins, selectorIndex);
+            ASSERT(selectorIndex > 0);
+            if ((selectorIndex > 0) && (selectorIndex <= selectorDescriptor->bNrInPins))
+            {
+                sourceID = selectorDescriptor->baSourceID[selectorIndex - 1];
+                TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DESCRIPTOR, " - sourceID %02x", sourceID);
+            }
+            if (selectorIndex != defaultIndex)
+            {
+                RETURN_NTSTATUS_IF_FAILED(ControlRequestSetSelector(deviceContext, GetInterfaceNumber(), selectorDescriptor->bUnitID, defaultIndex));
+            }
+        }
+    }
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Exit %!STATUS!", status);
+
     return status;
 }
 
@@ -2869,6 +2930,50 @@ NTSTATUS USBAudio2ControlInterface::ReconnectClockAll(
 
 _Use_decl_annotations_
 PAGED_CODE_SEG
+NTSTATUS USBAudio2ControlInterface::GetCurrentSelectorSourceID(
+    PDEVICE_CONTEXT deviceContext,
+    UCHAR &         sourceID
+)
+{
+    NTSTATUS status = STATUS_SUCCESS;
+
+    PAGED_CODE();
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Entry");
+
+    sourceID = USBAudioConfiguration::InvalidID;
+
+    ULONG numOfAcSelectorInfo = m_acSelectorUnitInfo.GetNumOfArray();
+
+    for (ULONG index = 0; index < numOfAcSelectorInfo; index++)
+    {
+        NS_USBAudio0200::PCS_AC_SELECTOR_UNIT_DESCRIPTOR selectorDescriptor = nullptr;
+        if (NT_SUCCESS(m_acSelectorUnitInfo.Get(index, selectorDescriptor)))
+        {
+            UCHAR selectorIndex = 0; // 1 origin
+            RETURN_NTSTATUS_IF_FAILED(ControlRequestGetSelector(deviceContext, GetInterfaceNumber(), selectorDescriptor->bUnitID, selectorIndex));
+            TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DESCRIPTOR, " - bNrInPins %u, selectorIndex %u", selectorDescriptor->bNrInPins, selectorIndex);
+            ASSERT(selectorIndex > 0);
+            if ((selectorIndex > 0) && (selectorIndex <= selectorDescriptor->bNrInPins))
+            {
+                sourceID = selectorDescriptor->baSourceID[selectorIndex - 1];
+                TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DESCRIPTOR, " - sourceID %02x", sourceID);
+            }
+            else
+            {
+                status = STATUS_UNSUCCESSFUL;
+                RETURN_NTSTATUS_IF_FAILED(status);
+            }
+        }
+    }
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Exit %!STATUS!", status);
+
+    return status;
+}
+
+_Use_decl_annotations_
+PAGED_CODE_SEG
 NTSTATUS USBAudio2ControlInterface::QueryCurrentAttributeAll(
     PDEVICE_CONTEXT deviceContext
 )
@@ -2947,7 +3052,9 @@ NTSTATUS USBAudio2ControlInterface::SetDefaultAttributeAll(
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Entry");
 
-    status = SetDefaultFeatureUnit(deviceContext);
+    RETURN_NTSTATUS_IF_FAILED(SetDefaultSelectorUnit(deviceContext));
+
+    RETURN_NTSTATUS_IF_FAILED(SetDefaultFeatureUnit(deviceContext));
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Exit %!STATUS!", status);
 
@@ -5239,12 +5346,9 @@ USBAudioConfiguration::ParseCSInterface(const NS_USBAudio::PCS_GENERIC_AUDIO_DES
                 break;
             case NS_USBAudio0200::MIXER_UNIT:
                 break;
-            case NS_USBAudio0200::SELECTOR_UNIT: {
-                UCHAR    selectorIndex = 0;
-                NTSTATUS statusTemp = ControlRequestGetSelector(m_deviceContext, lastInterface->GetInterfaceNumber(), ((NS_USBAudio0200::PCS_AC_SELECTOR_UNIT_DESCRIPTOR)descriptor)->bUnitID, selectorIndex);
-                TraceEvents(TRACE_LEVEL_ERROR, TRACE_DESCRIPTOR, "NS_USBAudio0200::SELECTOR_UNIT selectorIndex = %u, status = %!STATUS!", selectorIndex, statusTemp);
+            case NS_USBAudio0200::SELECTOR_UNIT:
+                status = ((USBAudioControlInterface *)lastInterface)->SetSelectorUnit(descriptor);
                 break;
-            }
             case NS_USBAudio0200::FEATURE_UNIT:
                 status = ((USBAudioControlInterface *)lastInterface)->SetFeatureUnit(descriptor);
                 break;
@@ -5765,6 +5869,7 @@ Return Value:
 
     // for test.
     // CheckInterfaceConfiguration();
+
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Exit %!STATUS!", status);
 
     return STATUS_SUCCESS;

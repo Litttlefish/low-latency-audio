@@ -747,6 +747,8 @@ Return Value:
     status = STATUS_SUCCESS;
     deviceContext = GetDeviceContext(device);
 
+    deviceContext->IsPrepareHardwareSucceeded = false;
+
     WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
     attributes.ParentObject = device;
 
@@ -1012,6 +1014,12 @@ Return Value:
     {
         RETURN_NTSTATUS_IF_FAILED(AcxDeviceAddCircuit(device, deviceContext->Capture));
     }
+
+    if (NT_SUCCESS(status))
+    {
+        deviceContext->IsPrepareHardwareSucceeded = true;
+    }
+
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit %!STATUS!", status);
 
     return status;
@@ -1051,9 +1059,12 @@ Return Value:
     deviceContext = GetDeviceContext(device);
     NT_ASSERT(deviceContext != nullptr);
 
-    USBAudioAcxDriverSaveInternalParametersToDeviceRegistry(deviceContext);
+    if (deviceContext->IsPrepareHardwareSucceeded)
+    {
+        USBAudioAcxDriverSaveInternalParametersToDeviceRegistry(deviceContext);
 
-    SaveSampleRateToRegistry(deviceContext->Device, deviceContext->AudioProperty.SampleRate);
+        SaveSampleRateToRegistry(deviceContext->Device, deviceContext->AudioProperty.SampleRate);
+    }
 
     if (deviceContext->ContiguousMemory != nullptr)
     {

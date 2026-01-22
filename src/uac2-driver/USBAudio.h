@@ -255,6 +255,42 @@ typedef struct CS_AS_ISOCHRONOUS_AUDIO_DATA_ENDPOINT_DESCRIPTOR
 // Defines according to USB Audio Release 2.0.
 namespace NS_USBAudio0200
 {
+
+// "Universal Serial Bus Device Class Definition for Audio Data Formats Release 2.0"
+// 4.1 Audio Channel Cluster Descriptor
+// bmChannelConfig
+enum
+{
+	FRONT_LEFT = (1 << 0),	
+	FRONT_RIGHT = (1 << 1),	
+	FRONT_CENTER = (1 << 2),	
+	LOW_FREQUENCY_EFFECTS_LFE = (1 << 3),	
+	BACK_LEFT = (1 << 4),	
+	BACK_RIGHT = (1 << 5),	
+	FRONT_LEFT_OF_CENTER = (1 << 6),	
+	FRONT_RIGHT_OF_CENTER = (1 << 7),	
+	BACK_CENTER = (1 << 8),	
+	SIDE_LEFT = (1 << 9),	
+	SIDE_RIGHT = (1 << 10),	
+	TOP_CENTER = (1 << 11),	
+	TOP_FRONT_LEFT = (1 << 12),	
+	TOP_FRONT_CENTER = (1 << 13),	
+	TOP_FRONT_RIGHT = (1 << 14),	
+	TOP_BACK_LEFT = (1 << 15),	
+	TOP_BACK_CENTER = (1 << 16),	
+	TOP_BACK_RIGHT = (1 << 17),	
+	TOP_FRONT_LEFT_OF_CENTER = (1 << 18),	
+	TOP_FRONT_RIGHT_OF_CENTER = (1 << 19),	
+	LEFT_LOW_FREQUENCY_EFFECTS = (1 << 20),	
+	RIGHT_LOW_FREQUENCY_EFFECTS = (1 << 21),	
+	TOP_SIDE_LEFT = (1 << 22),	
+	TOP_SIDE_RIGHT = (1 << 23),	
+	BOTTOM_CENTER = (1 << 24),	
+	BACK_LEFT_OF_CENTER = (1 << 25),	
+	BACK_RIGHT_OF_CENTER = (1 << 26),	
+	RAW_DATA = (1 << 31)
+};
+
 // "Universal Serial Bus Device Class Definition for Audio Data Formats Release 2.0"
 // Table A-2: Audio Data Format Type I Bit Allocations
 enum

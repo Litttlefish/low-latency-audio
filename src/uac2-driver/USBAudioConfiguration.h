@@ -1133,6 +1133,12 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
+    NTSTATUS SetDefaultSelectorUnit(
+        _In_ PDEVICE_CONTEXT deviceContext
+    );
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
     NTSTATUS GetClockSourceIDFromTerminal(
         _In_ bool     isInput,
         _In_ UCHAR    terminalLink,
@@ -1170,6 +1176,13 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
+    NTSTATUS GetCurrentSelectorSourceID(
+        _In_ PDEVICE_CONTEXT deviceContext,
+        _Out_ UCHAR &        sourceID
+    );
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
     NTSTATUS SearchOutputTerminal(
         _Inout_ UCHAR &  sourceID,
         _Inout_ UCHAR &  numOfChannels,
@@ -1189,7 +1202,8 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
     {
         MAX_CLOCK_SELECTOR = 10,
         MAX_TERMINAL = 10,
-        MAX_FEATURE_UNIT = 10
+        MAX_FEATURE_UNIT = 10,
+        MAX_SELECTOR_UNIT = 10
     };
 
     // NS_USBAudio0200::PCS_AC_INTERFACE_HEADER_DESCRIPTOR m_interfaceDescriptor{nullptr};
@@ -1198,6 +1212,7 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
     VariableArray<NS_USBAudio0200::PCS_AC_OUTPUT_TERMINAL_DESCRIPTOR, MAX_TERMINAL>      m_acOutputTerminalInfo;
     VariableArray<NS_USBAudio0200::PCS_AC_INPUT_TERMINAL_DESCRIPTOR, MAX_TERMINAL>       m_acInputTerminalInfo;
     VariableArray<NS_USBAudio0200::PCS_AC_FEATURE_UNIT_DESCRIPTOR, MAX_FEATURE_UNIT>     m_acFeatureUnitInfo;
+    VariableArray<NS_USBAudio0200::PCS_AC_SELECTOR_UNIT_DESCRIPTOR, MAX_SELECTOR_UNIT>   m_acSelectorUnitInfo;
     ULONG                                                                                m_clockEntityBitMap[4]{};
     ULONG                                                                                m_clockEntityCount{0};
 };
