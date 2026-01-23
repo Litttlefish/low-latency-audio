@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="USBAsioControlPanel.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:USBAsioControlPanel"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="USBAsioControlPanel">
+
+    <!-- Acrylic is better than Mica for dialogs like this -->
+    <Window.SystemBackdrop>
+        <DesktopAcrylicBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- The main tab navigation. The handler for this is in the code-behind -->
+        <NavigationView x:Name="MainNavView"
+                        PaneDisplayMode="Top"
+                        SelectionFollowsFocus="Enabled"
+                        IsSettingsVisible="False"
+                        IsBackButtonVisible="Collapsed"
+                        ItemInvoked="NavigationView_ItemInvoked"
+                        Loaded="NavigationView_Loaded">
+
+            <NavigationView.MenuItems>
+                <NavigationViewItem x:Uid="Main_TabAsio" Tag="ASIO" />
+                <NavigationViewItem x:Uid="Main_TabAbout" Tag="About" />
+            </NavigationView.MenuItems>
+
+            <Frame x:Name="MainContentFrame" />
+
+        </NavigationView>
+        
+        <!-- Buttons -->
+        <!-- Because the main window cannot be a contentdialog, there is no automatic handling
+             of the enter and escape keys. That must be done manually in the code behind for
+             the main window. -->
+
+        <Grid Grid.Row="2"
+              Background="{StaticResource SolidBackgroundFillColorSecondaryBrush }">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Button x:Name="OKButton"
+                    x:Uid="Main_OKButton"
+                    Click="OKButton_Click"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Grid.Column="0"
+                    HorizontalAlignment="Right"
+                    MinWidth="100"
+                    Margin="10, 20, 0, 20" />
+
+            <Button x:Name="CancelButton"
+                    x:Uid="Main_CancelButton"
+                    Click="CancelButton_Click"
+                    Grid.Column="1"
+                    MinWidth="100"
+                    Margin="10, 20, 20, 20" />
+
+        </Grid>
+        
+    </Grid>
+</Window>

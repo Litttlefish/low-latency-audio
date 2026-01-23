@@ -1,0 +1,18 @@
+// Copyright (c) Yamaha Corporation
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License
+// ============================================================================
+// This is part of the Microsoft Low-Latency Audio driver project.
+// Further information: https://aka.ms/asio
+// ============================================================================
+// ASIO is a registered trademark of Steinberg Media Technologies GmbH.
+
+namespace USBAsioControlPanel
+{
+    [default_interface]
+    runtimeclass MainWindow : Microsoft.UI.Xaml.Window
+    {
+        MainWindow();
+       // Int32 MyProperty;
+    }
+}

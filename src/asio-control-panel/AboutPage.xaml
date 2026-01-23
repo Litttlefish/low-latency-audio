@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="USBAsioControlPanel.AboutPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:USBAsioControlPanel"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    NavigationCacheMode="Required">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0"
+                    Orientation="Vertical"
+                    VerticalAlignment="Top">
+
+            <TextBlock x:Uid="About_Description" 
+                       TextWrapping="WrapWholeWords" />
+
+            <TextBlock x:Uid="About_Copyright" 
+                       TextWrapping="WrapWholeWords" />
+
+            <TextBlock x:Uid="About_Acknowledgements"
+                       TextWrapping="WrapWholeWords"
+                       Margin="0,18,0,0" />
+
+        </StackPanel>
+
+        <Grid Grid.Row="1"
+              Margin="0,18,0,0"
+              HorizontalAlignment="Stretch">
+            <TextBlock>
+                <Hyperlink x:Uid="About_LearnMoreHyperlink">
+                    <Run x:Uid="About_LearnMoreHyperlinkText" />
+                </Hyperlink>
+            </TextBlock>
+        </Grid>
+
+        <Grid Grid.Row="2"
+              Margin="0,20,0,0"
+              HorizontalAlignment="Stretch">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>    
+        
+            <!-- TODO: Make this image smaller or look for a different ASIO logo image in the SDK -->
+            <Image Source="/Assets/ASIOLogoIcon2.bmp" 
+                   HorizontalAlignment="Left"
+                   Grid.Column="0"
+                   VerticalAlignment="Top"
+                   Height="40"
+                   Stretch="Uniform"/>
+
+            <StackPanel Orientation="Vertical"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Top"
+                        Margin="10,0,0,0"
+                        Grid.Column="1">
+                <TextBlock x:Uid="About_ASIOTrademark" 
+                           TextWrapping="WrapWholeWords"
+                           VerticalAlignment="Center"/>
+
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>
