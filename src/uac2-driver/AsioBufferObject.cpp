@@ -508,7 +508,7 @@ AsioBufferObject::CopyFromAsioToOutputData(
         for (ULONG asioCh = 0; asioCh < m_playChannels; ++asioCh)
         {
             ULONG usbCh = asioCh;
-            if (usbCh >= m_deviceContext->OutputUsbChannels)
+            if (usbCh >= m_deviceContext->OutputProperty.UsbChannels)
             {
                 // TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_ASIO, "ASIO OUT channel %u is not mapped", asioCh);
                 continue;
@@ -587,7 +587,7 @@ AsioBufferObject::CopyFromAsioToOutputData(
         for (ULONG asioCh = 0; asioCh < m_playChannels; ++asioCh)
         {
             ULONG usbCh = asioCh;
-            if (usbCh >= m_deviceContext->OutputUsbChannels)
+            if (usbCh >= m_deviceContext->OutputProperty.UsbChannels)
             {
                 // TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_ASIO, "ASIO OUT channel %u is not mapped", asioCh);
                 continue;
@@ -665,7 +665,7 @@ AsioBufferObject::CopyToAsioFromInputData(
         for (ULONG asioCh = 0; asioCh < m_recChannels; ++asioCh)
         {
             ULONG usbCh = asioCh;
-            if (usbCh >= m_deviceContext->InputUsbChannels)
+            if (usbCh >= m_deviceContext->InputProperty.UsbChannels)
             {
                 // TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_ASIO, "ASIO IN channel %u is not mapped", asioCh);
                 continue;
@@ -761,7 +761,7 @@ AsioBufferObject::CopyToAsioFromInputData(
         for (ULONG asioCh = 0; asioCh < m_recChannels; ++asioCh)
         {
             ULONG usbCh = asioCh;
-            if (usbCh >= m_deviceContext->InputUsbChannels)
+            if (usbCh >= m_deviceContext->InputProperty.UsbChannels)
             {
                 // TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_ASIO, "ASIO IN channel %u is not mapped", asioCh);
                 continue;

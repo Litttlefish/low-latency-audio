@@ -1,0 +1,43 @@
+// Copyright (c) Yamaha Corporation
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License
+// ============================================================================
+// This is part of the Microsoft Low-Latency Audio driver project.
+// Further information: https://aka.ms/asio
+// ============================================================================
+// ASIO is a registered trademark of Steinberg Media Technologies GmbH.
+
+namespace USBAsioControlPanel
+{
+    [default_interface] 
+    runtimeclass AsioViewModel : Microsoft.UI.Xaml.Data.INotifyPropertyChanged
+    {
+        AsioViewModel();
+        void Initialize(Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue);
+
+        // Yamaha:
+        // This will need to be changed to a collection of objects that contain
+        // at least the name and an identifier. This viewmodel will also need to
+        // have a CurrentDevice get/set property of that type that the combobox
+        // can bind the selected item to, causing it to change and refresh in the
+        // viewmodel. You will need similar for the buffer size, sample rate, sample
+        // size, etc.
+        Windows.Foundation.Collections.IObservableVector<String> Devices { get; };
+
+        Windows.Foundation.Collections.IObservableVector<UInt16> BufferSizes { get; };
+        Windows.Foundation.Collections.IObservableVector<UInt32> SampleRates { get; };
+        Windows.Foundation.Collections.IObservableVector<UInt16> SampleSizes { get; };
+
+
+        Int32 DeviceSelectedIndex { get; set; };
+        Int32 SampleRateSelectedIndex { get; set; };
+        Int32 BufferSizeSelectedIndex { get; set; };
+
+        Windows.Foundation.IAsyncAction LoadDevicesAsync();
+
+        Windows.Foundation.IAsyncAction OnDeviceChangedAsync();
+        Windows.Foundation.IAsyncAction OkButtonClickedAsync();
+
+        void Dispose();
+    }
+}

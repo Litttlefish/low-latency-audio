@@ -188,7 +188,7 @@ class RtPacketObject
         ULONGLONG RtPacketEstimatedPosition{0ULL};
         ULONG     RtPacketCurrentPacket{0};
         ULONGLONG LastPacketStartQpcPosition{0ULL};
-        ULONG     UsbChannel{0}; // stereo 2nd strem will be 2
+        ULONG     UsbChannel{0}; // stereo 2nd stream will be 2
         ULONG     Channels{0};   // Number of channels in Acx Audio
         bool      Pause{false};
     } RT_PACKET_INFO;

@@ -255,6 +255,42 @@ typedef struct CS_AS_ISOCHRONOUS_AUDIO_DATA_ENDPOINT_DESCRIPTOR
 // Defines according to USB Audio Release 2.0.
 namespace NS_USBAudio0200
 {
+
+// "Universal Serial Bus Device Class Definition for Audio Data Formats Release 2.0"
+// 4.1 Audio Channel Cluster Descriptor
+// bmChannelConfig
+enum
+{
+	FRONT_LEFT = (1 << 0),	
+	FRONT_RIGHT = (1 << 1),	
+	FRONT_CENTER = (1 << 2),	
+	LOW_FREQUENCY_EFFECTS_LFE = (1 << 3),	
+	BACK_LEFT = (1 << 4),	
+	BACK_RIGHT = (1 << 5),	
+	FRONT_LEFT_OF_CENTER = (1 << 6),	
+	FRONT_RIGHT_OF_CENTER = (1 << 7),	
+	BACK_CENTER = (1 << 8),	
+	SIDE_LEFT = (1 << 9),	
+	SIDE_RIGHT = (1 << 10),	
+	TOP_CENTER = (1 << 11),	
+	TOP_FRONT_LEFT = (1 << 12),	
+	TOP_FRONT_CENTER = (1 << 13),	
+	TOP_FRONT_RIGHT = (1 << 14),	
+	TOP_BACK_LEFT = (1 << 15),	
+	TOP_BACK_CENTER = (1 << 16),	
+	TOP_BACK_RIGHT = (1 << 17),	
+	TOP_FRONT_LEFT_OF_CENTER = (1 << 18),	
+	TOP_FRONT_RIGHT_OF_CENTER = (1 << 19),	
+	LEFT_LOW_FREQUENCY_EFFECTS = (1 << 20),	
+	RIGHT_LOW_FREQUENCY_EFFECTS = (1 << 21),	
+	TOP_SIDE_LEFT = (1 << 22),	
+	TOP_SIDE_RIGHT = (1 << 23),	
+	BOTTOM_CENTER = (1 << 24),	
+	BACK_LEFT_OF_CENTER = (1 << 25),	
+	BACK_RIGHT_OF_CENTER = (1 << 26),	
+	RAW_DATA = (1 << 31)
+};
+
 // "Universal Serial Bus Device Class Definition for Audio Data Formats Release 2.0"
 // Table A-2: Audio Data Format Type I Bit Allocations
 enum
@@ -513,6 +549,13 @@ typedef struct CS_AC_INTERFACE_HEADER_DESCRIPTOR
     UCHAR  bmControls;
 } CS_AC_INTERFACE_HEADER_DESCRIPTOR, *PCS_AC_INTERFACE_HEADER_DESCRIPTOR;
 
+enum 
+{
+	SIZE_OF_CS_AC_INTERFACE_HEADER_DESCRIPTOR = 9
+};
+
+C_ASSERT(sizeof(CS_AC_INTERFACE_HEADER_DESCRIPTOR) == SIZE_OF_CS_AC_INTERFACE_HEADER_DESCRIPTOR);
+
 // Table 4-6: Clock Source Descriptor
 typedef struct CS_AC_CLOCK_SOURCE_DESCRIPTOR
 {
@@ -525,6 +568,13 @@ typedef struct CS_AC_CLOCK_SOURCE_DESCRIPTOR
     UCHAR bAssocTerminal;
     UCHAR iClockSource;
 } CS_AC_CLOCK_SOURCE_DESCRIPTOR, *PCS_AC_CLOCK_SOURCE_DESCRIPTOR;
+
+enum 
+{
+    SIZE_OF_CS_AC_CLOCK_SOURCE_DESCRIPTOR = 8
+};
+
+C_ASSERT(sizeof(CS_AC_CLOCK_SOURCE_DESCRIPTOR) == SIZE_OF_CS_AC_CLOCK_SOURCE_DESCRIPTOR);
 
 // Table 4-7: Clock Selector Descriptor
 typedef struct CS_AC_CLOCK_SELECTOR_DESCRIPTOR
@@ -540,6 +590,13 @@ typedef struct CS_AC_CLOCK_SELECTOR_DESCRIPTOR
     UCHAR iClockSelector;
 } CS_AC_CLOCK_SELECTOR_DESCRIPTOR, *PCS_AC_CLOCK_SELECTOR_DESCRIPTOR;
 
+enum 
+{
+    SIZE_OF_MINIMUM_CS_AC_CLOCK_SELECTOR_DESCRIPTOR = 5 + 0 + 2
+};
+
+C_ASSERT(sizeof(CS_AC_CLOCK_SELECTOR_DESCRIPTOR) == (SIZE_OF_MINIMUM_CS_AC_CLOCK_SELECTOR_DESCRIPTOR + 1));
+
 // Table 4-8: Clock Multiplier Descriptor
 typedef struct CS_AC_CLOCK_MULTIPLIER_DESCRIPTOR
 {
@@ -551,6 +608,13 @@ typedef struct CS_AC_CLOCK_MULTIPLIER_DESCRIPTOR
     UCHAR bmControls;
     UCHAR iClockMultiplier;
 } CS_AC_CLOCK_MULTIPLIER_DESCRIPTOR, *PCS_AC_CLOCK_MULTIPLIER_DESCRIPTOR;
+
+enum 
+{
+	SIZE_OF_CS_AC_CLOCK_MULTIPLIER_DESCRIPTOR = 7
+};
+
+C_ASSERT(sizeof(CS_AC_CLOCK_MULTIPLIER_DESCRIPTOR) == (SIZE_OF_CS_AC_CLOCK_MULTIPLIER_DESCRIPTOR));
 
 // Table 4-9: Input Terminal Descriptor
 typedef struct CS_AC_INPUT_TERMINAL_DESCRIPTOR
@@ -569,6 +633,13 @@ typedef struct CS_AC_INPUT_TERMINAL_DESCRIPTOR
     UCHAR  iTerminal;
 } CS_AC_INPUT_TERMINAL_DESCRIPTOR, *PCS_AC_INPUT_TERMINAL_DESCRIPTOR;
 
+enum 
+{
+    SIZE_OF_CS_AC_INPUT_TERMINAL_DESCRIPTOR = 17
+};
+
+C_ASSERT(sizeof(CS_AC_INPUT_TERMINAL_DESCRIPTOR) == (SIZE_OF_CS_AC_INPUT_TERMINAL_DESCRIPTOR));
+
 // Table 4-10: Output Terminal Descriptor
 typedef struct CS_AC_OUTPUT_TERMINAL_DESCRIPTOR
 {
@@ -583,6 +654,13 @@ typedef struct CS_AC_OUTPUT_TERMINAL_DESCRIPTOR
     UCHAR  bmControls[2];
     UCHAR  iTerminal;
 } CS_AC_OUTPUT_TERMINAL_DESCRIPTOR, *PCS_AC_OUTPUT_TERMINAL_DESCRIPTOR;
+
+enum 
+{
+    SIZE_OF_CS_AC_OUTPUT_TERMINAL_DESCRIPTOR = 12
+};
+
+C_ASSERT(sizeof(CS_AC_OUTPUT_TERMINAL_DESCRIPTOR) == (SIZE_OF_CS_AC_OUTPUT_TERMINAL_DESCRIPTOR));
 
 // Table 4-11: Mixer Unit Descriptor
 typedef struct CS_AC_MIXER_UNIT_DESCRIPTOR_COMMON {
@@ -620,13 +698,17 @@ typedef struct CS_AC_SELECTOR_UNIT_DESCRIPTOR
     UCHAR bDescriptorSubtype; // SELECTOR_UNIT descriptor subtype.
     UCHAR bUnitID;
     UCHAR bNrInPins;
-    struct
-    {
-        UCHAR baSourceID;
-        UCHAR bmControls;
-        UCHAR iSelector;
-    } pin[1];
+	UCHAR baSourceID[1];
+	UCHAR bmControls;
+	UCHAR iSelector;
 } CS_AC_SELECTOR_UNIT_DESCRIPTOR, *PCS_AC_SELECTOR_UNIT_DESCRIPTOR;
+
+enum 
+{
+	SIZE_OF_MINIMUM_CS_AC_SELECTOR_UNIT_DESCRIPTOR = 7 + 0
+};
+
+C_ASSERT(sizeof(CS_AC_SELECTOR_UNIT_DESCRIPTOR) == (SIZE_OF_MINIMUM_CS_AC_SELECTOR_UNIT_DESCRIPTOR + 1));
 
 // Table 4-13: Feature Unit Descriptor
 enum
@@ -660,8 +742,15 @@ typedef struct CS_AC_FEATURE_UNIT_DESCRIPTOR
     {
         UCHAR bmaControls[4];
     } ch[1];
-    // UCHAR		iFeature;                       // offset = 5 + (ch + 1) * 4
+    UCHAR		iFeature;                       // offset = 5 + (ch + 1) * 4
 } CS_AC_FEATURE_UNIT_DESCRIPTOR, *PCS_AC_FEATURE_UNIT_DESCRIPTOR;
+
+enum 
+{
+    SIZE_OF_MINIMUM_CS_AC_FEATURE_UNIT_DESCRIPTOR = (5 + 0 * 4 + 1),
+};
+
+C_ASSERT(sizeof(CS_AC_FEATURE_UNIT_DESCRIPTOR) == (SIZE_OF_MINIMUM_CS_AC_FEATURE_UNIT_DESCRIPTOR + 4));
 
 // Table 4-14: Sampling Rate Converter Unit Descriptor
 typedef struct CS_AC_SAMPLING_RATE_CONVERTER_UNIT_DESCRIPTOR
@@ -670,10 +759,18 @@ typedef struct CS_AC_SAMPLING_RATE_CONVERTER_UNIT_DESCRIPTOR
     UCHAR bDescriptorType;    // CS_INTERFACE descriptor type.
     UCHAR bDescriptorSubtype; // SAMPLE_RATE_CONVERTER descriptor
     UCHAR bUnitID;
+	UCHAR bSourceID;
     UCHAR bCSourceInID;
     UCHAR bCSourceOutID;
     UCHAR iSRC;
 } CS_AC_SAMPLING_RATE_CONVERTER_UNIT_DESCRIPTOR, *PCS_AC_SAMPLING_RATE_CONVERTER_UNIT_DESCRIPTOR;
+
+enum 
+{
+	SIZE_OF_CS_AC_SAMPLING_RATE_CONVERTER_UNIT_DESCRIPTOR = 8
+};
+
+C_ASSERT(sizeof(CS_AC_SAMPLING_RATE_CONVERTER_UNIT_DESCRIPTOR) == (SIZE_OF_CS_AC_SAMPLING_RATE_CONVERTER_UNIT_DESCRIPTOR));
 
 // Table 4-15: Common Part of the Effect Unit Descriptor
 /* Commented out because it cannot be expressed in a struct definition.
@@ -731,16 +828,20 @@ typedef struct CS_AC_EXTENSION_UNIT_DESCRIPTOR
     UCHAR  bUnitID;
     USHORT wExtensionCode;
     UCHAR  bNrInPins;
-    struct
-    {
-        UCHAR baSourceID;
-        UCHAR bNrChannels;
-        UCHAR bmChannelConfig[4];
-        UCHAR iChannelNames;
-        UCHAR bmControls;
-        UCHAR iExtension;
-    } pin[1];
+	UCHAR baSourceID[1];
+	UCHAR bNrChannels;
+	UCHAR bmChannelConfig[4];
+	UCHAR iChannelNames;
+	UCHAR bmControls;
+	UCHAR iExtension;
 } CS_AC_EXTENSION_UNIT_DESCRIPTOR, *PCS_AC_EXTENSION_UNIT_DESCRIPTOR;
+
+enum 
+{
+	SIZE_OF_MINIMUM_CS_AC_EXTENSION_UNIT_DESCRIPTOR = 7 + 0 + 8
+};
+
+C_ASSERT(sizeof(CS_AC_EXTENSION_UNIT_DESCRIPTOR) == (SIZE_OF_MINIMUM_CS_AC_EXTENSION_UNIT_DESCRIPTOR + 1));
 
 // Table 4-27: Class-Specific AS Interface Descriptor
 typedef struct CS_AS_INTERFACE_DESCRIPTOR
@@ -757,6 +858,13 @@ typedef struct CS_AS_INTERFACE_DESCRIPTOR
     UCHAR iChannelNames;
 } CS_AS_INTERFACE_DESCRIPTOR, *PCS_AS_INTERFACE_DESCRIPTOR;
 
+enum
+{
+    SIZE_OF_CS_AS_INTERFACE_DESCRIPTOR = 16
+};
+
+C_ASSERT(sizeof(CS_AS_INTERFACE_DESCRIPTOR) == (SIZE_OF_CS_AS_INTERFACE_DESCRIPTOR));
+
 // Table 4-28: Encoder Descriptor
 typedef struct CS_AS_ENCODER_DESCRIPTOR
 {
@@ -765,6 +873,7 @@ typedef struct CS_AS_ENCODER_DESCRIPTOR
     UCHAR bDescriptorSubtype; // ENCODER descriptor subtype.
     UCHAR bEncoderID;
     UCHAR bEncoder;
+	UCHAR bReserved[3];
     UCHAR bmControls[4];
     UCHAR iParam1;
     UCHAR iParam2;
@@ -776,6 +885,13 @@ typedef struct CS_AS_ENCODER_DESCRIPTOR
     UCHAR iParam8;
     UCHAR iEncoder;
 } CS_AS_ENCODER_DESCRIPTOR, *PCS_AS_ENCODER_DESCRIPTOR;
+
+enum 
+{
+	SIZE_OF_CS_AS_ENCODER_DESCRIPTOR = 21
+};
+
+C_ASSERT(sizeof(CS_AS_ENCODER_DESCRIPTOR) == (SIZE_OF_CS_AS_ENCODER_DESCRIPTOR));
 
 // Table 4-29: MPEG Decoder Descriptor
 // Table 4-30: AC-3 Decoder Descriptor
@@ -800,6 +916,13 @@ typedef struct CS_AS_ISOCHRONOUS_AUDIO_DATA_ENDPOINT_DESCRIPTOR
     UCHAR  bLockDelayUnits;
     USHORT wLockDelay;
 } CS_AS_ISOCHRONOUS_AUDIO_DATA_ENDPOINT_DESCRIPTOR, *PCS_AS_ISOCHRONOUS_AUDIO_DATA_ENDPOINT_DESCRIPTOR;
+
+enum 
+{
+    SIZE_OF_CS_AS_ISOCHRONOUS_AUDIO_DATA_ENDPOINT_DESCRIPTOR = 8
+};
+
+C_ASSERT(sizeof(CS_AS_ISOCHRONOUS_AUDIO_DATA_ENDPOINT_DESCRIPTOR) == (SIZE_OF_CS_AS_ISOCHRONOUS_AUDIO_DATA_ENDPOINT_DESCRIPTOR));
 
 // 5.2.3.1 Layout 1 Parameter Block
 // Table 5-2: 1-byte Control CUR Parameter Block
@@ -903,8 +1026,10 @@ typedef struct CS_AS_TYPE_I_FORMAT_TYPE_DESCRIPTOR
 
 enum
 {
-    SIZE_OF_CS_AS_TYPE_I_FORMAT_TYPE_DESCRIPTOR = sizeof(CS_AS_TYPE_I_FORMAT_TYPE_DESCRIPTOR)
+    SIZE_OF_CS_AS_TYPE_I_FORMAT_TYPE_DESCRIPTOR = 6
 };
+
+C_ASSERT(sizeof(CS_AS_TYPE_I_FORMAT_TYPE_DESCRIPTOR) == (SIZE_OF_CS_AS_TYPE_I_FORMAT_TYPE_DESCRIPTOR));
 
 // Table 2-3: Type II Format Type Descriptor
 typedef struct CS_AS_TYPE_II_FORMAT_TYPE_DESCRIPTOR
@@ -919,8 +1044,10 @@ typedef struct CS_AS_TYPE_II_FORMAT_TYPE_DESCRIPTOR
 
 enum
 {
-    SIZE_OF_CS_AS_TYPE_II_FORMAT_TYPE_DESCRIPTOR = sizeof(CS_AS_TYPE_II_FORMAT_TYPE_DESCRIPTOR)
+    SIZE_OF_CS_AS_TYPE_II_FORMAT_TYPE_DESCRIPTOR = 8
 };
+
+C_ASSERT(sizeof(CS_AS_TYPE_II_FORMAT_TYPE_DESCRIPTOR) == (SIZE_OF_CS_AS_TYPE_II_FORMAT_TYPE_DESCRIPTOR));
 
 // Table 2-4: Type III Format Type Descriptor
 typedef struct CS_AS_TYPE_III_FORMAT_TYPE_DESCRIPTOR
@@ -932,6 +1059,13 @@ typedef struct CS_AS_TYPE_III_FORMAT_TYPE_DESCRIPTOR
 	UCHAR bSubslotSize;       // Number The number of bytes occupied by one audio subslot. Must be set to two.
 	UCHAR bBitResolution;     // Number The number of effectively used bits from the available bits in an audio subframe.
 } CS_AS_TYPE_III_FORMAT_TYPE_DESCRIPTOR, *PCS_AS_TYPE_III_FORMAT_TYPE_DESCRIPTOR;
+
+enum
+{
+    SIZE_OF_CS_AS_TYPE_III_FORMAT_TYPE_DESCRIPTOR = 6
+};
+
+C_ASSERT(sizeof(CS_AS_TYPE_III_FORMAT_TYPE_DESCRIPTOR) == (SIZE_OF_CS_AS_TYPE_III_FORMAT_TYPE_DESCRIPTOR));
 
 // Universal Serial Bus Device Class Definition for Terminal Types     Release 2.0
 // Table 2-1: USB Terminal Types

@@ -336,6 +336,7 @@ Capture_AllocateSupportedFormats(
                     validBits,
                     UsbAudioDataFormatManager->GetFormatType(formatIndex),
                     UsbAudioDataFormatManager->GetFormat(formatIndex),
+                    false,
                     ksDataFormatWaveFormatExtensible,
                     ksDataFormatWaveFormatExtensibleMemory
                 );
@@ -645,7 +646,7 @@ Return Value:
             // Create capture endpoint pin.
             //
             ACX_PIN_CALLBACKS_INIT(&pinCallbacks);
-            if (deviceContext->InputChannelNames != USBAudioConfiguration::InvalidString)
+            if (deviceContext->InputProperty.ChannelNames != USBAudioConfiguration::InvalidString)
             {
                 pinCallbacks.EvtAcxPinRetrieveName = CodecC_EvtAcxPinRetrieveName;
             }

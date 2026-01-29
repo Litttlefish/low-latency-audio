@@ -190,8 +190,6 @@ class CUSBAsio : public IASIO, public CUnknown
     LONG                          m_outputReadyBlock{0};
     HANDLE                        m_usbDeviceHandle{INVALID_HANDLE_VALUE};
     UAC_AUDIO_PROPERTY            m_audioProperty{0};
-    UAC_SET_FLAGS_CONTEXT         m_driverFlags{0};
-    ULONG                         m_fixedSamplingRate{0};
     ASIOIoFormatType              m_requestedSampleFormat{0};
     ULONG                         m_inAvailableChannels{0};
     ULONG                         m_outAvailableChannels{0};
@@ -222,8 +220,7 @@ class CUSBAsio : public IASIO, public CUnknown
         _In_ void * Param
     );
 
-    bool  MeasureLatency();
-    bool  ApplySettings();
+    bool  GetLatency();
     bool  ExecuteControlPanel();
     ULONG CalcInputLatency(
         _In_ ULONG SamplingRate,

@@ -106,7 +106,7 @@ MixingEngineThread::CreateThread(MIXING_ENGINE_THREAD_FUNCTION mixingEngineThrea
     m_threadEvents[0] = (PVOID)&m_threadReadyEvent;
     m_threadEvents[1] = (PVOID)m_thread;
 
-    status = KeWaitForMultipleObjects(sizeof(m_threadEvents) / sizeof(m_threadEvents[0]), m_threadEvents, WaitAny, Executive, KernelMode, FALSE, nullptr, nullptr);
+    status = KeWaitForMultipleObjects(ARRAYSIZE(m_threadEvents), m_threadEvents, WaitAny, Executive, KernelMode, FALSE, nullptr, nullptr);
     if (status == STATUS_WAIT_0)
     {
         status = STATUS_SUCCESS;
@@ -209,24 +209,21 @@ void MixingEngineThread::ThreadMain()
 #endif
     KeSetEvent(&m_threadReadyEvent, EVENT_INCREMENT, FALSE);
 
-    status = KeWaitForMultipleObjects(sizeof(m_startEvents) / sizeof(m_startEvents[0]), m_startEvents, WaitAny, Executive, KernelMode, FALSE, nullptr, nullptr);
+    status = KeWaitForMultipleObjects(ARRAYSIZE(m_startEvents), m_startEvents, WaitAny, Executive, KernelMode, FALSE, nullptr, nullptr);
     if (!NT_SUCCESS(status) || (status == STATUS_WAIT_0))
     {
         goto ThreadMain_Exit;
     }
 
-    LARGE_INTEGER maxDueTime;
-    maxDueTime.QuadPart = 0ll - (LONGLONG)m_deviceContext->ClassicFramesPerIrp * 10000LL;
-
-    LARGE_INTEGER duetime;
-    duetime.QuadPart = maxDueTime.QuadPart;
+    LONGLONG duetime = 0ll - (LONGLONG)m_deviceContext->ClassicFramesPerIrp * 10000LL;
+    LONGLONG period = (LONGLONG)m_wakeUpIntervalUs * 10LL;
 
     EXT_SET_PARAMETERS setParameters;
 
     ExInitializeSetTimerParameters(&setParameters);
     setParameters.NoWakeTolerance = 10LL * 10LL;
 
-    ExSetTimer(exTimer, duetime.QuadPart, 100LL * 10LL, &setParameters);
+    ExSetTimer(exTimer, duetime, period, &setParameters);
 
     // ======================================================================
     ASSERT(m_mixingEngineThreadFunction != nullptr);

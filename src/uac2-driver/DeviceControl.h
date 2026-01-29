@@ -6,8 +6,6 @@
 // Further information: https://aka.ms/asio
 // ============================================================================
 
-
-
 /*++
 
 Module Name:
@@ -85,6 +83,24 @@ NTSTATUS ControlRequestSetClockSelector(
     _In_ UCHAR           interfaceNumber,
     _In_ UCHAR           entityID,
     _In_ UCHAR           clockSelectorIndex
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS ControlRequestGetSelector(
+    _In_ PDEVICE_CONTEXT deviceContext,
+    _In_ UCHAR           interfaceNumber,
+    _In_ UCHAR           entityID,
+    _In_ UCHAR &         selectorIndex
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS ControlRequestSetSelector(
+    _In_ PDEVICE_CONTEXT deviceContext,
+    _In_ UCHAR           interfaceNumber,
+    _In_ UCHAR           entityID,
+    _In_ UCHAR           selectorIndex
 );
 
 __drv_maxIRQL(PASSIVE_LEVEL)

@@ -37,6 +37,18 @@ Environment:
 #include "USBAudioDataFormat.tmh"
 #endif
 
+static const DWORD g_ChannelMaskArray[] = {
+    KSAUDIO_SPEAKER_DIRECTOUT,
+    KSAUDIO_SPEAKER_MONO,
+    KSAUDIO_SPEAKER_STEREO,
+    KSAUDIO_SPEAKER_3POINT0,
+    KSAUDIO_SPEAKER_SURROUND,
+    KSAUDIO_SPEAKER_5POINT0,
+    KSAUDIO_SPEAKER_5POINT1,
+    KSAUDIO_SPEAKER_7POINT0,
+    KSAUDIO_SPEAKER_7POINT1,
+};
+
 _Use_decl_annotations_
 PAGED_CODE_SEG
 USBAudioDataFormat::USBAudioDataFormat()
@@ -521,6 +533,7 @@ NTSTATUS USBAudioDataFormat::BuildWaveFormatExtensible(
     UCHAR                                validBits,
     ULONG                                formatType,
     ULONG                                format,
+    bool                                 isNoMask,
     PKSDATAFORMAT_WAVEFORMATEXTENSIBLE & ksDataFormatWaveFormatExtensible,
     WDFMEMORY &                          ksDataFormatWaveFormatExtensibleMemory
 )
@@ -586,7 +599,21 @@ NTSTATUS USBAudioDataFormat::BuildWaveFormatExtensible(
             ksDataFormatWaveFormatExtensible->WaveFormatExt.Format.nBlockAlign = static_cast<WORD>(channels * bytesPerSample);
             ksDataFormatWaveFormatExtensible->WaveFormatExt.Format.wBitsPerSample = static_cast<WORD>(bytesPerSample * 8);
             ksDataFormatWaveFormatExtensible->WaveFormatExt.Samples.wValidBitsPerSample = validBits;
-            ksDataFormatWaveFormatExtensible->WaveFormatExt.dwChannelMask = (channels == 1 ? KSAUDIO_SPEAKER_MONO : KSAUDIO_SPEAKER_STEREO);
+            if (isNoMask)
+            {
+                ksDataFormatWaveFormatExtensible->WaveFormatExt.dwChannelMask = KSAUDIO_SPEAKER_DIRECTOUT;
+            }
+            else
+            {
+                if (channels < ARRAYSIZE(g_ChannelMaskArray))
+                {
+                    ksDataFormatWaveFormatExtensible->WaveFormatExt.dwChannelMask = g_ChannelMaskArray[channels];
+                }
+                else
+                {
+                    ksDataFormatWaveFormatExtensible->WaveFormatExt.dwChannelMask = SPEAKER_ALL;
+                }
+            }
             ksDataFormatWaveFormatExtensible->WaveFormatExt.SubFormat = *ksDataFormatSubType;
             status = STATUS_SUCCESS;
         }

@@ -169,6 +169,27 @@ typedef struct _DEVICE_CONTEXT
         ULONG SuggestedBufferPeriod;
     } INTERNAL_PARAMETERS;
 
+    typedef struct AUDIO_PROPERTY_
+    {
+        UCHAR          InterfaceNumber;     // Currently selected input interface number
+        UCHAR          AlternateSetting;    // Currently selected input alternate setting number
+        UCHAR          EndpointNumber;      // Currently selected input endpoint number
+        ULONG          BytesPerBlock;       // Bytes per block for input (usually InChannels * BytesPerSample)
+        ULONG          MaxSamplesPerPacket; // Number of frames transferable per micro frame for input
+        ULONG          FormatType;
+        ULONG          Format;
+        ULONG          BytesPerSample;      // Bytes per sample
+        ULONG          ValidBitsPerSample;  // Valid bits per sample
+        volatile ULONG MeasuredSampleRate;  // Measured input sampling rate (1-second average)
+        ULONG          PacketsPerSec;       // ISO (Micro) Frames per second
+        ULONG          SamplesPerPacket;    // Number of samples per ISO Frame (truncated)
+        ULONG          DeviceLatency;
+        ULONG          UsbChannels;
+        UCHAR          ChannelNames;
+        ULONG          IsoPacketSize;
+        ULONG          LockDelay;
+    } AUDIO_PROPERTY;
+
     typedef struct FEEDBACK_PROPERTY_
     {
         UCHAR FeedbackInterfaceNumber;
@@ -207,62 +228,53 @@ typedef struct _DEVICE_CONTEXT
     ULONG                              NumOfOutputDevices;
     WDFMEMORY                          RenderStreamEngineMemory;
     WDFMEMORY                          CaptureStreamEngineMemory;
-
-    LARGE_INTEGER PerformanceCounterFrequency;
-
-    PWSTR                      DeviceName;
-    WDFMEMORY                  DeviceNameMemory;
-    PWSTR                      SerialNumber;
-    WDFMEMORY                  SerialNumberMemory;
-    UAC_AUDIO_PROPERTY         AudioProperty;
-    UAC_SUPPORTED_CONTROL_LIST SupportedControl;
-    FEEDBACK_PROPERTY          FeedbackProperty;
-    ULONG                      FramesPerMs;         // Number of (micro)frames per ms. 1 or 8
-    ULONG                      ClassicFramesPerIrp;
-    bool                       IsDeviceAdaptive;    // True if the output Endpoint is Adaptive
-    bool                       IsDeviceSynchronous; // True if the output Endpoint is Synchronous
-    UCHAR                      DeviceClass;
-    UCHAR                      DeviceProtocol;
-    ULONG                      InputUsbChannels;
-    ULONG                      OutputUsbChannels;
-    UCHAR                      InputChannelNames;
-    UCHAR                      OutputChannelNames;
-    LONG                       StartCounterAsio;
-    LONG                       StartCounterWdmAudio;
-    LONG                       StartCounterIsoStream;
-    LONG                       IsIdleStopSucceeded;
-
-    LARGE_INTEGER        LastVendorRequestTime;
-    NTSTATUS             LastActivationStatus;
-    ULONG                InputIsoPacketSize;
-    ULONG                OutputIsoPacketSize;
-    WCHAR                InputAsioChannelName[UAC_MAX_ASIO_CHANNEL][UAC_MAX_CHANNEL_NAME_LENGTH];
-    WCHAR                OutputAsioChannelName[UAC_MAX_ASIO_CHANNEL][UAC_MAX_CHANNEL_NAME_LENGTH];
-    ULONG                InputLockDelay;
-    ULONG                OutputLockDelay;
-    bool                 SuperSpeedCompatible;
-    StreamObject *       StreamObject;
-    AsioBufferObject *   AsioBufferObject;
-    WDFFILEOBJECT        AsioBufferOwner;
-    WDFFILEOBJECT        AsioOwner;
-    WDFFILEOBJECT        ResetRequestOwner;
-    UACSampleFormat      SampleFormatBackup;
-    ErrorStatistics *    ErrorStatistics;
-    UAC_USB_LATENCY      UsbLatency;
-    UACSampleFormat      DesiredSampleFormat;
-    UCHAR                ClockSelectorId;
-    ULONG                AcClockSources;
-    AC_CLOCK_SOURCE_INFO AcClockSourceInfo[UAC_MAX_CLOCK_SOURCE];
-    WCHAR                ClockSourceName[UAC_MAX_CLOCK_SOURCE][UAC_MAX_CLOCK_SOURCE_NAME_LENGTH];
-    ULONG                CurrentClockSource;
-    KEVENT               ClockObservationThreadKillEvent;
-    PKTHREAD             ClockObservationThread;
-    LARGE_INTEGER        ResetEnableTime;
-
-    INTERNAL_PARAMETERS             Params;
-    const UAC_LATENCY_OFFSET_LIST * LatencyOffsetList;
-    ULONG                           HubCount;
-
+    LARGE_INTEGER                      PerformanceCounterFrequency;
+    PWSTR                              DeviceName;
+    WDFMEMORY                          DeviceNameMemory;
+    PWSTR                              SerialNumber;
+    WDFMEMORY                          SerialNumberMemory;
+    UAC_AUDIO_PROPERTY                 AudioProperty;
+    UAC_SUPPORTED_CONTROL_LIST         SupportedControl;
+    AUDIO_PROPERTY                     InputProperty;
+    AUDIO_PROPERTY                     OutputProperty;
+    FEEDBACK_PROPERTY                  FeedbackProperty;
+    ULONG                              FramesPerMs;         // Number of (micro)frames per ms. 1 or 8
+    ULONG                              ClassicFramesPerIrp;
+    bool                               IsDeviceAdaptive;    // True if the output Endpoint is Adaptive
+    bool                               IsDeviceSynchronous; // True if the output Endpoint is Synchronous
+    UCHAR                              DeviceClass;
+    UCHAR                              DeviceProtocol;
+    LONG                               StartCounterAsio;
+    LONG                               StartCounterWdmAudio;
+    LONG                               StartCounterIsoStream;
+    LONG                               IsIdleStopSucceeded;
+    LARGE_INTEGER                      LastVendorRequestTime;
+    NTSTATUS                           LastActivationStatus;
+    bool                               IsPrepareHardwareSucceeded;
+    WCHAR                              InputAsioChannelName[UAC_MAX_ASIO_CHANNEL][UAC_MAX_CHANNEL_NAME_LENGTH];
+    WCHAR                              OutputAsioChannelName[UAC_MAX_ASIO_CHANNEL][UAC_MAX_CHANNEL_NAME_LENGTH];
+    bool                               SuperSpeedCompatible;
+    StreamObject *                     StreamObject;
+    AsioBufferObject *                 AsioBufferObject;
+    WDFFILEOBJECT                      AsioBufferOwner;
+    WDFFILEOBJECT                      AsioOwner;
+    WDFFILEOBJECT                      ResetRequestOwner;
+    UACSampleFormat                    SampleFormatBackup;
+    ErrorStatistics *                  ErrorStatistics;
+    UAC_USB_LATENCY                    UsbLatency;
+    UACSampleFormat                    DesiredSampleFormat;
+    UCHAR                              ClockSelectorId;
+    ULONG                              AcClockSources;
+    AC_CLOCK_SOURCE_INFO               AcClockSourceInfo[UAC_MAX_CLOCK_SOURCE];
+    WCHAR                              ClockSourceName[UAC_MAX_CLOCK_SOURCE][UAC_MAX_CLOCK_SOURCE_NAME_LENGTH];
+    ULONG                              CurrentClockSource;
+    KEVENT                             ClockObservationThreadKillEvent;
+    PKTHREAD                           ClockObservationThread;
+    LARGE_INTEGER                      ResetEnableTime;
+    UCHAR                              AudioControlInterfaceNumber; // Audio Control interface number
+    INTERNAL_PARAMETERS                Params;
+    const UAC_LATENCY_OFFSET_LIST *    LatencyOffsetList;
+    ULONG                              HubCount;
 } DEVICE_CONTEXT, *PDEVICE_CONTEXT;
 
 //
@@ -549,6 +561,44 @@ bool USBAudioAcxDriverHasAsioOwnership(
 
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
+NTSTATUS USBAudioAcxDriverLoadInternalParametersFromDeviceRegistry(
+    _In_ PDEVICE_CONTEXT deviceContext
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS USBAudioAcxDriverSaveInternalParametersToDeviceRegistry(
+    _In_ PDEVICE_CONTEXT deviceContext
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS SaveAsioDeviceToRegistry(
+    _In_ PUNICODE_STRING asioDevice
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS LoadAsioDeviceFromRegistry(
+    _Out_ PUNICODE_STRING asioDevice
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS SaveSampleRateToRegistry(
+    _In_ WDFDEVICE device,
+    _In_ ULONG     sampleRate
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS LoadSampleRateFromRegistry(
+    _In_ WDFDEVICE device,
+    _Out_ ULONG &  sampleRate
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
 VOID EvtUSBAudioAcxDriverGetAudioProperty(
     _In_ WDFOBJECT  object,
     _In_ WDFREQUEST request
@@ -578,13 +628,6 @@ VOID EvtUSBAudioAcxDriverGetLatencyOffsetOfSampleRate(
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
 VOID EvtUSBAudioAcxDriverSetClockSource(
-    _In_ WDFOBJECT  object,
-    _In_ WDFREQUEST request
-);
-
-__drv_maxIRQL(PASSIVE_LEVEL)
-PAGED_CODE_SEG
-VOID EvtUSBAudioAcxDriverSetFlags(
     _In_ WDFOBJECT  object,
     _In_ WDFREQUEST request
 );
@@ -641,6 +684,48 @@ VOID EvtUSBAudioAcxDriverUnsetAsioBuffer(
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
 VOID EvtUSBAudioAcxDriverReleaseAsioOwnership(
+    _In_ WDFOBJECT  object,
+    _In_ WDFREQUEST request
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+VOID EvtUSBAudioAcxDriverGetBufferPeriod(
+    _In_ WDFOBJECT  object,
+    _In_ WDFREQUEST request
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+VOID EvtUSBAudioAcxDriverSetBufferPeriod(
+    _In_ WDFOBJECT  object,
+    _In_ WDFREQUEST request
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+VOID EvtUSBAudioAcxDriverGetInputLatency(
+    _In_ WDFOBJECT  object,
+    _In_ WDFREQUEST request
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+VOID EvtUSBAudioAcxDriverGetOutputLatency(
+    _In_ WDFOBJECT  object,
+    _In_ WDFREQUEST request
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+VOID EvtUSBAudioAcxDriverSetAsioDevice(
+    _In_ WDFOBJECT  object,
+    _In_ WDFREQUEST request
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+VOID EvtUSBAudioAcxDriverGetAsioDevice(
     _In_ WDFOBJECT  object,
     _In_ WDFREQUEST request
 );

@@ -1,13 +1,8 @@
-# Remove this when the ASIO Control Panel is ready to put on github
+.vs/
+Generated Files/
+packages/
 
-*.cpp
-*.h
-*.rc
-*.bmp
-*.rc2
-*.sln
+
+# Visual Studio user-specific files
+*.vcxproj.user
 *.user
-*.vcxproj
-*.filters
-
-res\*.*

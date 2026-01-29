@@ -24,6 +24,7 @@ Environment:
 --*/
 
 #include "framework.h"
+#include <devioctl.h>
 #include <initguid.h> // Guid definition
 #include <ks.h>
 #include <ksmedia.h>
@@ -53,29 +54,6 @@ static constexpr double c_TwoRaisedTo32Reciprocal = 1. / c_TwoRaisedTo32;
 #endif
 #define DRIVER_NAME _T(DRIVER_NAME_8b)
 
-//
-// Parameters are currently passed using the HKEY_CURRENT_USER registry.
-// This implementation is not ideal, so we plan to switch to using
-// DeviceIoControl via the ACX driver in the near future.
-//
-static const TCHAR * c_RegistryKeyName = _T("Software\\Microsoft\\Windows USB ASIO"); // ZANTEI, tentative
-static const TCHAR * c_FixedSamplingRateValueName = _T("FixedSamplingRate");
-static const TCHAR * c_PeriodFramesValueName = _T("PeriodFrames");
-static const TCHAR * c_ClassicFramesPerIrpValueName = _T("ClassicFramesPerIrp");
-static const TCHAR * c_ClassicFramesPerIrp2ValueName = _T("ClassicFramesPerIrp2");
-static const TCHAR * c_MaxIrpNumberValueName = _T("MaxIrpNumber");
-static const TCHAR * c_FirstPacketLatencyValueName = _T("FirstPacketLatency");
-static const TCHAR * c_PreSendFramesValueName = _T("PreSendFrames");
-static const TCHAR * c_OutputFrameDelayValueName = _T("OutputFrameDelay");
-static const TCHAR * c_DelayedOutputBufferSwitchName = _T("DelayedOutputBufferSwitch");
-static const TCHAR * c_AsioDeviceValueName = _T("AsioDevice");
-static const TCHAR * c_OutputBufferOperationOffsetName = _T("OutBufferOperationOffset");
-static const TCHAR * c_OutputHubOffsetName = _T("OutHubOffset");
-static const TCHAR * c_InputBufferOperationOffsetName = _T("InBufferOperationOffset");
-static const TCHAR * c_InputHubOffsetName = _T("InHubOffset");
-static const TCHAR * c_BufferThreadPriorityName = _T("BufferThreadPriority");
-static const TCHAR * c_DropoutDetectionName = _T("DropoutDetection");
-static const TCHAR * c_OutBulkOperationOffset = _T("OutBulkOperationOffset");
 static const TCHAR * c_ServiceName = _T("USBAudio2-ACX");
 static const TCHAR * c_ReferenceName = _T("RenderDevice0");
 
@@ -228,7 +206,13 @@ CUSBAsio::CUSBAsio(
         m_usbDeviceHandle = INVALID_HANDLE_VALUE;
     }
 
-    ApplySettings();
+    m_threadPriority = 2;
+
+    isSuccess = GetPeriodFrames(m_usbDeviceHandle, &m_blockFrames);
+    if (isSuccess != true)
+    {
+        m_blockFrames = UAC_DEFAULT_ASIO_BUFFER_SIZE;
+    }
 
     m_callbacks = 0;
 
@@ -345,10 +329,10 @@ CUSBAsio::~CUSBAsio()
 _Use_decl_annotations_
 void CUSBAsio::getDriverName(char * name)
 {
-	// 
-	// name uses multibyte character sets,
-	// so sprintf_s is used.
-	// 
+    //
+    // name uses multibyte character sets,
+    // so sprintf_s is used.
+    //
     strcpy_s(name, DRIVER_NAME_LENGTH, DRIVER_NAME_8b);
 }
 
@@ -530,17 +514,6 @@ ASIOError CUSBAsio::canSampleRate(ASIOSampleRate sampleRate)
         return ASE_NotPresent;
     }
     info_print_(_T("requested %lf Hz\n"), sampleRate);
-    if (m_fixedSamplingRate != 0)
-    {
-        if ((ULONG)sampleRate == m_fixedSamplingRate)
-        {
-            return ASE_OK;
-        }
-        else
-        {
-            return ASE_NoClock;
-        }
-    }
 
     {
         auto        lockDevice = m_deviceInfoCS.lock();
@@ -715,10 +688,10 @@ ASIOError CUSBAsio::getClockSources(ASIOClockSource * clocks, long * numSources)
             clocks[i].associatedGroup = -1;
             clocks[i].isCurrentSource = clockInfo->ClockSource[i].IsCurrentSource ? ASIOTrue : ASIOFalse;
 
-			// 
-			// ASIOClockSource::name uses multibyte character sets,
-			// so sprintf_s is used.
-			// 
+            //
+            // ASIOClockSource::name uses multibyte character sets,
+            // so sprintf_s is used.
+            //
             sprintf_s(clocks[i].name, CLOCK_SOURCE_NAME_LENGTH, "%S", clockInfo->ClockSource[i].Name);
         }
         *numSources = clockInfo->NumClockSource;
@@ -860,10 +833,10 @@ ASIOError CUSBAsio::getChannelInfo(ASIOChannelInfo * info)
             }
         }
 
-		// 
-		// ASIOChannelInfo::name uses multibyte character sets,
-		// so sprintf_s is used.
-		// 
+        //
+        // ASIOChannelInfo::name uses multibyte character sets,
+        // so sprintf_s is used.
+        //
         if (ch == m_channelInfo->NumChannels)
         {
             sprintf_s(info->name, DRIVER_NAME_LENGTH, "channel %u", info->channel);
@@ -1480,178 +1453,43 @@ ULONG CUSBAsio::calcOutputLatency(
 }
 
 //---------------------------------------------------------------------------------------------
-bool CUSBAsio::MeasureLatency()
+bool CUSBAsio::GetLatency()
 {
+    info_print_(_T("CUSBAsio::GetLatency\n"));
+
     if (m_activeInputs != 0 || m_activeOutputs != 0)
     {
         return true;
     }
 
-#if defined(INFO_PRINT_)
-    ULONG classicFramesPerIrp = (m_audioProperty.PacketsPerSec == 1000 ? m_driverFlags.ClassicFramesPerIrp : m_driverFlags.ClassicFramesPerIrp2);
-#endif
+    BOOL       result = FALSE;
+    KSPROPERTY privateProperty{};
+    ULONG      bytesReturned = 0;
 
-    m_inputLatency = m_blockFrames + m_audioProperty.InputLatencyOffset;
+    privateProperty.Set = KSPROPSETID_LowLatencyAudio;
+    privateProperty.Flags = KSPROPERTY_TYPE_GET;
 
-    m_outputLatency = m_blockFrames + m_audioProperty.OutputLatencyOffset;
+    privateProperty.Id = toInt(KsPropertyUACLowLatencyAudio::GetInputLatency);
 
-    info_print_(_T(" SampleRate = %d, m_blockFrames = %d, ClassicFramesPerIrp = %d, OutFrameDelay = %d, InputLatencyOffset = %d, OutputLatencyOffset = %d\n"), m_audioProperty.SampleRate, m_blockFrames, classicFramesPerIrp, m_driverFlags.OutputFrameDelay, m_audioProperty.InputLatencyOffset, m_audioProperty.OutputLatencyOffset);
-    info_print_(_T("calculated latency is in:%d, out:%d samples.\n"), m_inputLatency, m_outputLatency);
+    result = DeviceIoControl(m_usbDeviceHandle, IOCTL_KS_PROPERTY, &privateProperty, sizeof(KSPROPERTY), &m_inputLatency, sizeof(m_inputLatency), &bytesReturned, nullptr);
 
-    if (m_inputLatency == 0 || m_outputLatency == 0)
+    if (result == false || m_inputLatency == 0)
     {
-        return false;
-    }
-    else
-    {
-        return true;
-    }
-}
-
-bool CUSBAsio::ApplySettings()
-{
-    LONG  result;
-    HKEY  hKey;
-    ULONG temp;
-    DWORD size;
-
-    // default values
-    m_fixedSamplingRate = 0;
-    m_blockFrames = UAC_DEFAULT_ASIO_BUFFER_SIZE;
-    m_driverFlags.FirstPacketLatency = UAC_DEFAULT_FIRST_PACKET_LATENCY;
-    m_driverFlags.ClassicFramesPerIrp = UAC_DEFAULT_CLASSIC_FRAMES_PER_IRP;
-    m_driverFlags.MaxIrpNumber = UAC_DEFAULT_MAX_IRP_NUMBER;
-    m_driverFlags.PreSendFrames = UAC_DEFAULT_PRE_SEND_FRAMES;
-    m_driverFlags.OutputFrameDelay = UAC_DEFAULT_OUTPUT_FRAME_DELAY;
-    m_driverFlags.DelayedOutputBufferSwitch = UAC_DEFAULT_DELAYED_OUTPUT_BUFFER_SWITCH;
-    m_driverFlags.InputBufferOperationOffset = UAC_DEFAULT_IN_BUFFER_OPERATION_OFFSET;
-    m_driverFlags.InputHubOffset = UAC_DEFAULT_IN_HUB_OFFSET;
-    m_driverFlags.OutputBufferOperationOffset = UAC_DEFAULT_OUT_BUFFER_OPERATION_OFFSET;
-    m_driverFlags.OutputHubOffset = UAC_DEFAULT_OUT_HUB_OFFSET;
-    m_driverFlags.BufferThreadPriority = UAC_DEFAULT_BUFFER_THREAD_PRIORITY;
-    m_driverFlags.ClassicFramesPerIrp2 = UAC_DEFAULT_CLASSIC_FRAMES_PER_IRP;
-    m_driverFlags.SuggestedBufferPeriod = UAC_DEFAULT_ASIO_BUFFER_SIZE;
-    m_threadPriority = 2;
-    m_isDropoutDetectionSetting = UAC_DEFAULT_DROPOUT_DETECTION;
-
-    result = RegOpenKeyEx(HKEY_CURRENT_USER, c_RegistryKeyName, 0, KEY_READ, &hKey);
-
-    if (result == ERROR_SUCCESS)
-    {
-        size = sizeof(ULONG);
-        result = RegQueryValueEx(hKey, c_FixedSamplingRateValueName, 0, nullptr, (PBYTE)&temp, &size);
-        if (result == ERROR_SUCCESS)
-        {
-            m_fixedSamplingRate = temp;
-        }
-
-        size = sizeof(ULONG);
-        result = RegQueryValueEx(hKey, c_PeriodFramesValueName, 0, nullptr, (PBYTE)&temp, &size);
-        if (result == ERROR_SUCCESS)
-        {
-            m_blockFrames = temp;
-        }
-
-        size = sizeof(ULONG);
-        result = RegQueryValueEx(hKey, c_FirstPacketLatencyValueName, 0, nullptr, (PBYTE)&temp, &size);
-        if (result == ERROR_SUCCESS)
-        {
-            m_driverFlags.FirstPacketLatency = temp;
-        }
-        size = sizeof(ULONG);
-        result = RegQueryValueEx(hKey, c_ClassicFramesPerIrpValueName, 0, nullptr, (PBYTE)&temp, &size);
-        if (result == ERROR_SUCCESS)
-        {
-            m_driverFlags.ClassicFramesPerIrp = temp;
-        }
-        size = sizeof(ULONG);
-        result = RegQueryValueEx(hKey, c_ClassicFramesPerIrp2ValueName, 0, nullptr, (PBYTE)&temp, &size);
-        if (result == ERROR_SUCCESS)
-        {
-            m_driverFlags.ClassicFramesPerIrp2 = temp;
-        }
-
-        size = sizeof(ULONG);
-        result = RegQueryValueEx(hKey, c_MaxIrpNumberValueName, 0, nullptr, (PBYTE)&temp, &size);
-        if (result == ERROR_SUCCESS)
-        {
-            m_driverFlags.MaxIrpNumber = temp;
-        }
-
-        size = sizeof(ULONG);
-        result = RegQueryValueEx(hKey, c_PreSendFramesValueName, 0, nullptr, (PBYTE)&temp, &size);
-        if (result == ERROR_SUCCESS)
-        {
-            m_driverFlags.PreSendFrames = temp;
-        }
-
-        size = sizeof(ULONG);
-        result = RegQueryValueEx(hKey, c_OutputFrameDelayValueName, 0, nullptr, (PBYTE)&temp, &size);
-        if (result == ERROR_SUCCESS)
-        {
-            m_driverFlags.OutputFrameDelay = temp;
-        }
-
-        size = sizeof(ULONG);
-        result = RegQueryValueEx(hKey, c_DelayedOutputBufferSwitchName, 0, nullptr, (PBYTE)&temp, &size);
-        if (result == ERROR_SUCCESS)
-        {
-            m_driverFlags.DelayedOutputBufferSwitch = temp;
-        }
-
-        size = sizeof(ULONG);
-        result = RegQueryValueEx(hKey, c_InputBufferOperationOffsetName, 0, nullptr, (PBYTE)&temp, &size);
-        if (result == ERROR_SUCCESS)
-        {
-            m_driverFlags.InputBufferOperationOffset = temp;
-        }
-
-        size = sizeof(ULONG);
-        result = RegQueryValueEx(hKey, c_InputHubOffsetName, 0, nullptr, (PBYTE)&temp, &size);
-        if (result == ERROR_SUCCESS)
-        {
-            m_driverFlags.InputHubOffset = temp;
-        }
-
-        size = sizeof(ULONG);
-        result = RegQueryValueEx(hKey, c_OutputBufferOperationOffsetName, 0, nullptr, (PBYTE)&temp, &size);
-        if (result == ERROR_SUCCESS)
-        {
-            m_driverFlags.OutputBufferOperationOffset = temp;
-        }
-
-        size = sizeof(ULONG);
-        result = RegQueryValueEx(hKey, c_OutputHubOffsetName, 0, nullptr, (PBYTE)&temp, &size);
-        if (result == ERROR_SUCCESS)
-        {
-            m_driverFlags.OutputHubOffset = temp;
-        }
-
-        size = sizeof(ULONG);
-        result = RegQueryValueEx(hKey, c_BufferThreadPriorityName, 0, nullptr, (PBYTE)&temp, &size);
-        if (result == ERROR_SUCCESS)
-        {
-            m_driverFlags.BufferThreadPriority = temp;
-        }
-
-        size = sizeof(ULONG);
-        result = RegQueryValueEx(hKey, c_DropoutDetectionName, 0, nullptr, (PBYTE)&temp, &size);
-        if (result == ERROR_SUCCESS)
-        {
-            m_isDropoutDetectionSetting = temp != 0;
-        }
-
-        m_driverFlags.SuggestedBufferPeriod = m_blockFrames;
-
-        RegCloseKey(hKey);
+        return result;
     }
 
-    if (!SetFlags(m_usbDeviceHandle, m_driverFlags))
+    privateProperty.Id = toInt(KsPropertyUACLowLatencyAudio::GetOutputLatency);
+
+    result = DeviceIoControl(m_usbDeviceHandle, IOCTL_KS_PROPERTY, &privateProperty, sizeof(KSPROPERTY), &m_outputLatency, sizeof(m_outputLatency), &bytesReturned, nullptr);
+
+    if (result == false || m_outputLatency == 0)
     {
-        info_print_(_T("set flags failed.\n"));
-        return false;
+        return result;
     }
-    return true;
+
+    info_print_(_T("latency is in:%d, out:%d samples.\n"), m_inputLatency, m_outputLatency);
+
+    return result;
 }
 
 bool CUSBAsio::ExecuteControlPanel()
@@ -1690,9 +1528,15 @@ bool CUSBAsio::ExecuteControlPanel()
 
 bool CUSBAsio::GetDesiredPath()
 {
-    LONG  result;
-    DWORD size;
-    HKEY  hKey;
+    info_print_(_T("CUSBAsio::GetDesiredPath\n"));
+
+    HANDLE targetHandle = OpenUsbDevice((const LPGUID)&KSCATEGORY_AUDIO, c_ServiceName, c_ReferenceName, nullptr);
+
+    if (targetHandle == INVALID_HANDLE_VALUE)
+    {
+        info_print_(_T("targetHandle == INVALID_HANDLE_VALUE\n"));
+        return false;
+    }
 
     if (m_desiredPath != nullptr)
     {
@@ -1700,40 +1544,57 @@ bool CUSBAsio::GetDesiredPath()
         m_desiredPath = nullptr;
     }
 
-    result = RegOpenKeyEx(HKEY_CURRENT_USER, c_RegistryKeyName, 0, KEY_READ, &hKey);
-    if (result != ERROR_SUCCESS)
+    WCHAR      asioDevice[MAX_PATH] = {0};
+    bool       isSuccess = false;
+    KSPROPERTY privateProperty{};
+    ULONG      bytesReturned = 0;
+
+    privateProperty.Set = KSPROPSETID_LowLatencyAudio;
+    privateProperty.Flags = KSPROPERTY_TYPE_GET;
+    privateProperty.Id = toInt(KsPropertyUACLowLatencyAudio::GetAsioDevice);
+
+    isSuccess = DeviceIoControl(targetHandle, IOCTL_KS_PROPERTY, &privateProperty, sizeof(KSPROPERTY), asioDevice, sizeof(asioDevice), &bytesReturned, nullptr);
+
+    CloseHandle(targetHandle);
+
+    info_print_(_T("isSuccess = %u\n"), isSuccess);
+
+    info_print_(_T("bytesReturned = %u\n"), bytesReturned);
+
+    info_print_(_T("asioDevice %ls\n"), asioDevice);
+
+    if (!isSuccess)
+    {
+        return isSuccess;
+    }
+
+    m_desiredPath = new TCHAR[MAX_PATH];
+
+    if (m_desiredPath == nullptr)
     {
         return false;
     }
 
-    result = RegQueryValueEx(hKey, c_AsioDeviceValueName, 0, nullptr, nullptr, &size);
-    if (result != ERROR_SUCCESS || size == 0)
-    {
-        RegCloseKey(hKey);
-        return false;
-    }
+    int result = WideCharToMultiByte(CP_ACP, 0, asioDevice, -1, m_desiredPath, MAX_PATH, NULL, NULL);
 
-    m_desiredPath = new TCHAR[size / sizeof(TCHAR)];
-    result = RegQueryValueEx(hKey, c_AsioDeviceValueName, 0, nullptr, (LPBYTE)m_desiredPath, &size);
-    if (result != ERROR_SUCCESS)
+    info_print_(_T("WideCharToMultiByte result = %d\n"), result);
+
+    if (result == 0)
     {
-        RegCloseKey(hKey);
         delete[] m_desiredPath;
         m_desiredPath = nullptr;
         return false;
     }
 
-    RegCloseKey(hKey);
+    info_print_(_T("m_desiredPath %s\n"), m_desiredPath);
 
-    info_print_(_T("ASIO device path : %s\n"), m_desiredPath);
-
-    return true;
+    return isSuccess;
 }
 
 bool CUSBAsio::ObtainDeviceParameter()
 {
     int  bufferCoefficient = 1;
-    bool isLatencyMeasured = true;
+    bool isLatencyObtained = true;
     BOOL result = TRUE;
 
     auto lockDevice = m_deviceInfoCS.lock();
@@ -1829,8 +1690,8 @@ bool CUSBAsio::ObtainDeviceParameter()
         m_outAvailableChannels = m_audioProperty.OutputAsioChannels;
         m_sampleRate = (double)m_audioProperty.SampleRate;
 
-        isLatencyMeasured = MeasureLatency();
-        if (isLatencyMeasured)
+        isLatencyObtained = GetLatency();
+        if (isLatencyObtained)
         {
             break;
         }
@@ -1840,7 +1701,7 @@ bool CUSBAsio::ObtainDeviceParameter()
             continue;
         }
     }
-    if (!isLatencyMeasured)
+    if (!isLatencyObtained)
     {
         ReleaseAsioOwnership(m_usbDeviceHandle);
         CloseHandle(m_usbDeviceHandle);

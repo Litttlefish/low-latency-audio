@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="USBAsioControlPanel.AsioPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:USBAsioControlPanel"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    NavigationCacheMode="Required">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Selected Device -->
+        <ComboBox x:Name="DeviceCombo"
+                  x:Uid="AsioPage_DeviceCombo"
+                  Grid.Row="0"
+                  HorizontalAlignment="Stretch"
+                  Margin="10"
+                  SelectedIndex="{x:Bind Path=ViewModel.DeviceSelectedIndex, Mode=TwoWay}"
+                  ItemsSource="{x:Bind Path=ViewModel.Devices, Mode=OneWay}">
+        </ComboBox>
+
+        <!-- Buffer Size and Sample Rate -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <ComboBox x:Name="BufferSizeCombo"
+                      x:Uid="AsioPage_BufferSizeCombo"
+                      Grid.Column="0"
+                      Width="200"
+                      Margin="10"
+                      SelectedIndex="{x:Bind ViewModel.BufferSizeSelectedIndex, Mode=TwoWay}"
+                      ItemsSource="{x:Bind ViewModel.BufferSizes, Mode=OneWay}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock>
+                            <Run Text="{Binding}" />
+                            <Run x:Uid="AsioPage_BufferSizeSamplesSuffix" />
+                        </TextBlock>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <ComboBox x:Name="SampleRateCombo"
+                      x:Uid="AsioPage_SampleRateCombo"
+                      Grid.Column="1"
+                      Margin="10"
+                      HorizontalAlignment="Stretch"
+                      SelectedIndex="{x:Bind ViewModel.SampleRateSelectedIndex, Mode=TwoWay}"
+                      ItemsSource="{x:Bind ViewModel.SampleRates, Mode=OneWay}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock>
+                            <Run Text="{Binding}" />
+                            <Run Text="Hz" />
+                        </TextBlock>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </Grid>
+    </Grid>
+</Page>
