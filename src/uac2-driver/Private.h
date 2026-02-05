@@ -153,7 +153,7 @@ typedef int BOOL;
 #endif
 
 #define ALL_CHANNELS_ID     UINT32_MAX
-#define MAX_CHANNELS        2
+#define MAX_CHANNELS        32
 
 //
 // Ks support.
@@ -210,7 +210,10 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(ELEMENT_CONTEXT, GetElementContext)
 //
 typedef struct _MUTE_ELEMENT_CONTEXT
 {
-    BOOL MuteState[MAX_CHANNELS];
+    WDFDEVICE Device;
+    bool      MuteState[MAX_CHANNELS];
+    UCHAR     EntityID;
+    ULONG     NumberOfChannels;
 } MUTE_ELEMENT_CONTEXT, *PMUTE_ELEMENT_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(MUTE_ELEMENT_CONTEXT, GetMuteElementContext)
@@ -220,7 +223,10 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(MUTE_ELEMENT_CONTEXT, GetMuteElementContext)
 //
 typedef struct _VOLUME_ELEMENT_CONTEXT
 {
-    LONG VolumeLevel[MAX_CHANNELS];
+    WDFDEVICE Device;
+    LONG      VolumeLevel[MAX_CHANNELS];
+    UCHAR     EntityID;
+    ULONG     NumberOfChannels;
 } VOLUME_ELEMENT_CONTEXT, *PVOLUME_ELEMENT_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(VOLUME_ELEMENT_CONTEXT, GetVolumeElementContext)
@@ -393,6 +399,7 @@ typedef struct _CODEC_RENDER_CIRCUIT_CONTEXT
     WDFMEMORY      MuteElementsMemory;
     ACXMUTE *      MuteElements;
     ACXAUDIOENGINE AudioEngineElement;
+    ULONG          NumOfDevices;
 } CODEC_RENDER_CIRCUIT_CONTEXT, *PCODEC_RENDER_CIRCUIT_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(CODEC_RENDER_CIRCUIT_CONTEXT, GetRenderCircuitContext)
@@ -460,6 +467,20 @@ CodecR_CreateRenderCircuit(
     _In_ const UNICODE_STRING * CircuitName,
     _In_ const ULONG            SupportedSampleRate,
     _Out_ ACXCIRCUIT *          Circuit
+);
+
+PAGED_CODE_SEG
+NTSTATUS
+CodecR_VolumeChangeLevelNotification(
+    _In_ ACXCIRCUIT Cirtuit,
+    _In_ UCHAR      EntityID
+);
+
+PAGED_CODE_SEG
+NTSTATUS
+CodecR_MuteChangeStateNotification(
+    _In_ ACXCIRCUIT Cirtuit,
+    _In_ UCHAR      EntityID
 );
 
 /////////////////////////////////////////////////////////

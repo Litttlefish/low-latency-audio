@@ -42,6 +42,7 @@ Trace.h
                             WPP_DEFINE_BIT(TRACE_CTRLREQUEST)                                                                       /* bit 14 = 0x00004000 */ \
                             WPP_DEFINE_BIT(TRACE_MULTICLIENT)                                                                       /* bit 15 = 0x00008000 */ \
                             WPP_DEFINE_BIT(TRACE_DESCRIPTOR)                                                                        /* bit 16 = 0x00010000 */ \
+                            WPP_DEFINE_BIT(TRACE_INTERRUPTTRANSFER)                                                                 /* bit 17 = 0x00020000 */ \
     )
 
 #include "trace_macros.h"

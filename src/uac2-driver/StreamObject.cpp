@@ -679,7 +679,7 @@ StreamObject::CreateMixingEngineThread(
     ASSERT(m_deviceContext != nullptr);
     if (m_mixingEngineThread == nullptr)
     {
-        m_mixingEngineThread = new (POOL_FLAG_NON_PAGED, DRIVER_TAG) MixingEngineThread(m_deviceContext, 1000);
+        m_mixingEngineThread = MixingEngineThread::CreateMixingEngineThread(m_deviceContext, 1000);
         IF_TRUE_ACTION_JUMP(m_mixingEngineThread == nullptr, status = STATUS_INSUFFICIENT_RESOURCES, CreateMixingEngineThread_Exit);
 
         status = m_mixingEngineThread->CreateThread(MixingEngineThreadFunction, priority, wakeUpIntervalUs);

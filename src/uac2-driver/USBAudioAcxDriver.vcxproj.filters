@@ -101,6 +101,12 @@
     <ClInclude Include="USBAudioDataFormat.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="InterruptDataMessage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WorkerThread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Device.cpp">
@@ -152,6 +158,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="USBAudioDataFormat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="InterruptDataMessage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WorkerThread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

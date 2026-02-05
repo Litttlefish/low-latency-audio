@@ -446,6 +446,11 @@ Return Value:
         return STATUS_SUCCESS;
     }
 
+    if (!deviceContext->UsbAudioConfiguration->IsEnableFeatureUnit(true))
+    {
+        volumeUnitID = muteUnitID = USBAudioConfiguration::InvalidID;
+    }
+
     USBAudioDataFormatManager * usbAudioDataFormatManager = deviceContext->UsbAudioConfiguration->GetUSBAudioDataFormatManager(true);
     RETURN_NTSTATUS_IF_TRUE_ACTION(usbAudioDataFormatManager == nullptr, status = STATUS_INVALID_PARAMETER, status);
 

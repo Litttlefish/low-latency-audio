@@ -3894,7 +3894,7 @@ NTSTATUS USBAudio2ControlInterface::GetCurrentVolume(
 )
 {
     NTSTATUS status = STATUS_SUCCESS;
-    USHORT   currentVolume = 0;
+    USHORT   currentVolume;
 
     PAGED_CODE();
 
@@ -7487,6 +7487,12 @@ NTSTATUS USBAudioConfiguration::OnInterruptDataMessageReceived(
         switch (attribute)
         {
         case NS_USBAudio0200::CUR:
+            // ZANTEI
+            // Ex: Creative Sound Blaster X3
+            // entity 1, control selector 2, control number 1 ～ 8
+            // entity 2, control selector 2, control number 3 ～ 8
+            // entity 11 (0x0b), control selector 2, control number 3 ～ 8
+            // entity 23 (0x17), control selector 2, control number 3 ～ 8
             status = UpdateCurrentValue(interfaceNumber, entityID, controlSelector, controlNumber, needNotify);
             break;
         default:
@@ -8112,11 +8118,31 @@ USBAudioConfiguration::GetStreamChannelInfo(
         {
             TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DESCRIPTOR, " - terminal link 0x%02x", terminalLink);
             status = SearchInputTerminalFromOutputTerminal(terminalLink, numOfChannels, terminalType, volumeUnitID, muteUnitID);
+#if true
+            if (volumeUnitID == USBAudioConfiguration::InvalidID)
+            { // ZANTEI
+                volumeUnitID = 1;
+            }
+			if (muteUnitID == USBAudioConfiguration::InvalidID)
+			{
+                muteUnitID = 1;
+			}
+#endif
         }
         else
         {
             TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DESCRIPTOR, " - terminal link 0x%02x", terminalLink);
             status = SearchOutputTerminalFromInputTerminal(terminalLink, numOfChannels, terminalType, volumeUnitID, muteUnitID);
+#if true										// ZANTEI
+            if (volumeUnitID == USBAudioConfiguration::InvalidID)
+            {
+                volumeUnitID = 2;
+            }
+			if (muteUnitID == USBAudioConfiguration::InvalidID)
+			{
+                muteUnitID = 2;
+			}
+#endif
         }
     }
 
@@ -8347,25 +8373,23 @@ bool USBAudioConfiguration::IsDeviceSplittable(
 PAGED_CODE_SEG
 _Use_decl_annotations_
 bool USBAudioConfiguration::IsEnableFeatureUnit(
-    bool /* isInput */
+    bool isInput
 )
 {
     PAGED_CODE();
 
-    // return !IsDeviceSplittable(isInput);
-	return false;
+    return !IsDeviceSplittable(isInput);
 }
 
 PAGED_CODE_SEG
 _Use_decl_annotations_
 bool USBAudioConfiguration::IsEnableConnectorControl(
-    bool /* isInput */
+    bool isInput
 )
 {
     PAGED_CODE();
 
-    // return !IsDeviceSplittable(isInput);
-	return false;
+    return !IsDeviceSplittable(isInput);
 }
 
 PAGED_CODE_SEG
