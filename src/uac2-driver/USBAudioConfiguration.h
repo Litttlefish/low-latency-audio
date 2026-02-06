@@ -453,7 +453,7 @@ class USBAudioControlInterface : public USBAudioInterface
         _In_ PDEVICE_CONTEXT deviceContext
     ) = 0;
 
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     virtual NTSTATUS SearchOutputTerminalFromInputTerminal(
         _In_ UCHAR     terminalLink,
         _Out_ UCHAR &  numOfChannels,
@@ -462,7 +462,7 @@ class USBAudioControlInterface : public USBAudioInterface
         _Out_ UCHAR &  muteUnitID
     ) = 0;
 
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     virtual NTSTATUS SearchInputTerminalFromOutputTerminal(
         _In_ UCHAR     terminalLink,
         _Out_ UCHAR &  numOfChannels,
@@ -503,7 +503,7 @@ class USBAudioControlInterface : public USBAudioInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     NTSTATUS
-    virtual _Success_(return == STATUS_SUCCESS)
+    virtual _Success_(NT_SUCCESS(return))
     GetVolumeConfiguration(
         _In_ PDEVICE_CONTEXT deviceContext,
         _In_ UCHAR           entityID,
@@ -797,7 +797,7 @@ class USBAudio1ControlInterface : public USBAudioControlInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     virtual NTSTATUS SearchOutputTerminalFromInputTerminal(
         _In_ UCHAR     terminalLink,
         _Out_ UCHAR &  numOfChannels,
@@ -808,7 +808,7 @@ class USBAudio1ControlInterface : public USBAudioControlInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     virtual NTSTATUS SearchInputTerminalFromOutputTerminal(
         _In_ UCHAR     terminalLink,
         _Out_ UCHAR &  numOfChannels,
@@ -868,7 +868,7 @@ class USBAudio1ControlInterface : public USBAudioControlInterface
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     NTSTATUS
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     GetVolumeConfiguration(
         _In_ PDEVICE_CONTEXT deviceContext,
         _In_ UCHAR           entityID,
@@ -1211,7 +1211,7 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     virtual NTSTATUS SearchOutputTerminalFromInputTerminal(
         _In_ UCHAR     terminalLink,
         _Out_ UCHAR &  numOfChannels,
@@ -1222,7 +1222,7 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     virtual NTSTATUS SearchInputTerminalFromOutputTerminal(
         _In_ UCHAR     terminalLink,
         _Out_ UCHAR &  numOfChannels,
@@ -1282,7 +1282,7 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     NTSTATUS
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     GetVolumeConfiguration(
         _In_ PDEVICE_CONTEXT deviceContext,
         _In_ UCHAR           entityID,
@@ -1302,7 +1302,7 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     virtual NTSTATUS GetCurrentVolume(
         _In_ PDEVICE_CONTEXT deviceContext,
         _In_ UCHAR           entityID,
@@ -1321,7 +1321,7 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     virtual NTSTATUS GetCurrentMute(
         _In_ PDEVICE_CONTEXT deviceContext,
         _In_ UCHAR           entityID,
@@ -1885,7 +1885,7 @@ class USBAudioInterfaceInfo
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     NTSTATUS SearchOutputTerminalFromInputTerminal(
         _In_ UCHAR     terminalLink,
         _Out_ UCHAR &  numOfChannels,
@@ -1896,7 +1896,7 @@ class USBAudioInterfaceInfo
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     NTSTATUS SearchInputTerminalFromOutputTerminal(
         _In_ UCHAR     terminalLink,
         _Out_ UCHAR &  numOfChannels,
@@ -1956,7 +1956,7 @@ class USBAudioInterfaceInfo
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     NTSTATUS
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     GetVolumeConfiguration(
         _In_ PDEVICE_CONTEXT deviceContext,
         _In_ UCHAR           entityID,
@@ -1976,7 +1976,7 @@ class USBAudioInterfaceInfo
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     virtual NTSTATUS GetCurrentVolume(
         _In_ PDEVICE_CONTEXT deviceContext,
         _In_ UCHAR           entityID,
@@ -1995,7 +1995,7 @@ class USBAudioInterfaceInfo
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     virtual NTSTATUS GetCurrentMute(
         _In_ PDEVICE_CONTEXT deviceContext,
         _In_ UCHAR           entityID,
@@ -2062,7 +2062,7 @@ class USBAudioConfiguration
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     NTSTATUS
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     GetCurrentTerminalLink(
         _In_ bool     isInput,
         _Out_ UCHAR & terminalLink
@@ -2071,7 +2071,7 @@ class USBAudioConfiguration
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     NTSTATUS
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     GetStreamChannelInfo(
         _In_ bool      isInput,
         _Out_ UCHAR &  numOfChannels,
@@ -2083,7 +2083,7 @@ class USBAudioConfiguration
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     NTSTATUS
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     GetStreamChannelInfoAdjusted(
         _In_ bool      isInput,
         _Out_ UCHAR &  numOfChannels,
@@ -2095,7 +2095,7 @@ class USBAudioConfiguration
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     NTSTATUS
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     GetVolumeConfiguration(
         _In_ UCHAR    entityID,
         _Out_ LONG &  minimum,
@@ -2114,7 +2114,7 @@ class USBAudioConfiguration
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     NTSTATUS GetCurrentVolume(
         _In_ PDEVICE_CONTEXT deviceContext,
         _In_ UCHAR           entityID,
@@ -2133,7 +2133,7 @@ class USBAudioConfiguration
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     NTSTATUS GetCurrentMute(
         _In_ PDEVICE_CONTEXT deviceContext,
         _In_ UCHAR           entityID,
@@ -2442,7 +2442,7 @@ class USBAudioConfiguration
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     NTSTATUS SearchOutputTerminalFromInputTerminal(
         _In_ UCHAR     terminalLink,
         _Out_ UCHAR &  numOfChannels,
@@ -2453,7 +2453,7 @@ class USBAudioConfiguration
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    _Success_(return == STATUS_SUCCESS)
+    _Success_(NT_SUCCESS(return))
     NTSTATUS SearchInputTerminalFromOutputTerminal(
         _In_ UCHAR     terminalLink,
         _Out_ UCHAR &  numOfChannels,

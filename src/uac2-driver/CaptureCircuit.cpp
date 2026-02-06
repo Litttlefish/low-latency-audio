@@ -370,14 +370,15 @@ Capture_AllocateSupportedFormats(
 }
 
 PAGED_CODE_SEG
+_Use_decl_annotations_
 NTSTATUS
 CodecC_CreateCaptureCircuit(
-    _In_ WDFDEVICE    Device,
-    _In_ const GUID * ComponentGuid,
-    _In_ const GUID * /* MicCustomName */,
-    _In_ const UNICODE_STRING * CircuitName,
-    _In_ const ULONG            SupportedSampleRate,
-    _Out_ ACXCIRCUIT *          Circuit
+    WDFDEVICE    Device,
+    const GUID * ComponentGuid,
+    const GUID * /* MicCustomName */,
+    const UNICODE_STRING * CircuitName,
+    const ULONG            SupportedSampleRate,
+    ACXCIRCUIT *           Circuit
 )
 /*++
 

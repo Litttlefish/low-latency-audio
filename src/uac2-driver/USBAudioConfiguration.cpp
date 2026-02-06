@@ -3707,14 +3707,14 @@ USBAudio2ControlInterface::GetVolumeConfiguration(
     status = ControlRequestGetVolumeRange(deviceContext, GetInterfaceNumber(), entityID, 0, memory, parameterBlock);
     if (NT_SUCCESS(status))
     {
-		TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DESCRIPTOR, " - volume range minimum %d (0x%x), maximum %d (0x%x), res %d (0x%x)", parameterBlock->subrange[0].wMIN, parameterBlock->subrange[0].wMIN, parameterBlock->subrange[0].wMAX, parameterBlock->subrange[0].wMAX, parameterBlock->subrange[0].wRES, parameterBlock->subrange[0].wRES);
+        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DESCRIPTOR, " - volume range minimum %d (0x%x), maximum %d (0x%x), res %d (0x%x)", parameterBlock->subrange[0].wMIN, parameterBlock->subrange[0].wMIN, parameterBlock->subrange[0].wMAX, parameterBlock->subrange[0].wMAX, parameterBlock->subrange[0].wRES, parameterBlock->subrange[0].wRES);
         if (parameterBlock->subrange[0].wMIN == 0x8000)
         {
             minimum = LONG_MIN;
         }
         else
         {
-            minimum = parameterBlock->subrange[0].wMIN * 0x10000;
+            minimum = (parameterBlock->subrange[0].wMIN * 0x10000) >> 8;
         }
         if (parameterBlock->subrange[0].wMAX == 0x8000)
         {
@@ -3722,9 +3722,9 @@ USBAudio2ControlInterface::GetVolumeConfiguration(
         }
         else
         {
-            maximum = parameterBlock->subrange[0].wMAX * 0x10000;
+            maximum = (parameterBlock->subrange[0].wMAX * 0x10000) >> 8;
         }
-        steppingDelta = (ULONG)parameterBlock->subrange[0].wRES * 0x10000;
+        steppingDelta = (ULONG)parameterBlock->subrange[0].wRES * 0x100; // 1/256 dB -> 1/65536
         WdfObjectDelete(memory);
     }
 
@@ -3876,7 +3876,7 @@ NTSTATUS USBAudio2ControlInterface::SetCurrentVolume(
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Entry");
 
-    volume >>= 16;
+    volume >>= 8;
     status = ControlRequestSetVolume(deviceContext, GetInterfaceNumber(), entityID, channel, (SHORT)volume);
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Exit, %!STATUS!", status);
@@ -3910,7 +3910,7 @@ NTSTATUS USBAudio2ControlInterface::GetCurrentVolume(
         }
         else
         {
-            volume = (LONG)((SHORT)currentVolume) * 0x10000;
+            volume = ((LONG)((SHORT)currentVolume) * 0x10000) >> 8;
         }
     }
 
@@ -3934,7 +3934,7 @@ NTSTATUS USBAudio2ControlInterface::SetCurrentMute(
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Entry");
 
-    status = ControlRequestGetMute(deviceContext, GetInterfaceNumber(), entityID, channel, mute);
+    status = ControlRequestSetMute(deviceContext, GetInterfaceNumber(), entityID, channel, mute);
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Exit, %!STATUS!", status);
 

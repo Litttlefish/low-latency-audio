@@ -263,6 +263,7 @@ ControlRequest(
 // Layout 1 Parameter Block
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
+_Success_(NT_SUCCESS(return))
 static NTSTATUS GetCurrentSetting(
     _In_ PDEVICE_CONTEXT deviceContext,
     _In_ UCHAR           interfaceNumber,
@@ -297,6 +298,7 @@ static NTSTATUS GetCurrentSetting(
 // Layout 2 Parameter Block
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
+_Success_(NT_SUCCESS(return))
 static NTSTATUS GetCurrentSetting(
     _In_ PDEVICE_CONTEXT deviceContext,
     _In_ UCHAR           interfaceNumber,
@@ -331,6 +333,7 @@ static NTSTATUS GetCurrentSetting(
 // Layout 3 Parameter Block
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
+_Success_(NT_SUCCESS(return))
 static NTSTATUS GetCurrentSetting(
     _In_ PDEVICE_CONTEXT deviceContext,
     _In_ UCHAR           interfaceNumber,
@@ -643,7 +646,7 @@ Return Value:
 
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
-static _Success_(return)
+static _Success_(NT_SUCCESS(return))
 NTSTATUS GetRangeWithAllocate(
     _In_ WDFOBJECT       parentObject,
     _In_ PDEVICE_CONTEXT deviceContext,
@@ -689,7 +692,7 @@ NTSTATUS GetRangeWithAllocate(
 
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
-static _Success_(return)
+static _Success_(NT_SUCCESS(return))
 NTSTATUS GetRangeWithAllocate(
     _In_ WDFOBJECT       parentObject,
     _In_ PDEVICE_CONTEXT deviceContext,
@@ -1074,7 +1077,7 @@ NTSTATUS ControlRequestGetMute(
         mute = true;
     }
 
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!", status);
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!, mute %!bool!", status, mute);
     return status;
 }
 
@@ -1104,7 +1107,7 @@ NTSTATUS ControlRequestSetMute(
         current
     );
 
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!", status);
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!, mute %u", status, current);
     return status;
 }
 
@@ -1132,7 +1135,7 @@ NTSTATUS ControlRequestGetVolume(
         volume
     );
 
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!", status);
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!, volume %u (0x%x)", status, volume, volume);
     return status;
 }
 
@@ -1160,7 +1163,7 @@ NTSTATUS ControlRequestSetVolume(
         volume
     );
 
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!", status);
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!, voulme %u (0x%x)", status, volume, volume);
     return status;
 }
 

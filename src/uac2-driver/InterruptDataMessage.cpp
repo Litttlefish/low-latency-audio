@@ -232,11 +232,11 @@ void InterruptMessageWorkerThreadFunction(
                 TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_INTERRUPTTRANSFER, "UpdateMuteEntity(0x%02x)", entityID);
                 if (deviceContext->Render != nullptr)
                 {
-					CodecR_MuteChangeStateNotification(deviceContext->Render, entityID);
+                    CodecR_MuteChangeStateNotification(deviceContext->Render, entityID);
                 }
                 if (deviceContext->Capture != nullptr)
                 {
-					// CodecC_MuteChangeStateNotification(deviceContext->Render, entityID);
+                    // CodecC_MuteChangeStateNotification(deviceContext->Render, entityID);
                 }
             }
         }

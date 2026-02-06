@@ -303,7 +303,7 @@ CodecR_EvtMuteAssignState(
     {
         if (muteContext->MuteState[Channel] != muteState)
         {
-			TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, " - set current mute %!bool!, entity ID 0x%02x, channel %d", (muteState != 0)? true: false, muteContext->EntityID, Channel);
+            TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, " - set current mute %!bool!, entity ID 0x%02x, channel %d", (muteState != 0) ? true : false, muteContext->EntityID, Channel);
             status = deviceContext->UsbAudioConfiguration->SetCurrentMute(deviceContext, muteContext->EntityID, (UCHAR)Channel, muteState);
         }
         muteContext->MuteState[Channel] = muteState;
@@ -314,7 +314,7 @@ CodecR_EvtMuteAssignState(
         {
             if (muteContext->MuteState[i] != muteState)
             {
-				TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, " - set current mute %!bool!, entity ID 0x%02x, channel %d", (muteState != 0)? true: false, muteContext->EntityID, Channel);
+                TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, " - set current mute %!bool!, entity ID 0x%02x, channel %d", (muteState != 0) ? true : false, muteContext->EntityID, Channel);
                 status = deviceContext->UsbAudioConfiguration->SetCurrentMute(deviceContext, muteContext->EntityID, (UCHAR)i, muteState);
             }
             muteContext->MuteState[i] = muteState;
@@ -401,12 +401,12 @@ CodecR_EvtRampedVolumeAssignLevel(
     {
         if (volumeContext->VolumeLevel[Channel] != VolumeLevel)
         {
-			TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, " - set current volume %ld, entity ID 0x%02x, channel %d", VolumeLevel, volumeContext->EntityID, Channel);
+            TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, " - set current volume %ld, entity ID 0x%02x, channel %d", VolumeLevel, volumeContext->EntityID, Channel);
             status = deviceContext->UsbAudioConfiguration->SetCurrentVolume(deviceContext, volumeContext->EntityID, (UCHAR)Channel, VolumeLevel);
-			if (NT_SUCCESS(status))
-			{
-				volumeContext->VolumeLevel[Channel] = VolumeLevel;
-			}
+            if (NT_SUCCESS(status))
+            {
+                volumeContext->VolumeLevel[Channel] = VolumeLevel;
+            }
         }
     }
     else if (Channel == ALL_CHANNELS_ID)
@@ -415,12 +415,12 @@ CodecR_EvtRampedVolumeAssignLevel(
         {
             if (volumeContext->VolumeLevel[i] != VolumeLevel)
             {
-				TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, " - set current volume %ld, entity ID 0x%02x, channel %d", VolumeLevel, volumeContext->EntityID, Channel);
-                status = deviceContext->UsbAudioConfiguration->SetCurrentVolume(deviceContext, volumeContext->EntityID, (UCHAR)Channel, VolumeLevel);
-				if (NT_SUCCESS(status))
-				{
-					volumeContext->VolumeLevel[i] = VolumeLevel;
-				}
+                TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, " - set current volume %ld, entity ID 0x%02x, channel %d", VolumeLevel, volumeContext->EntityID, i);
+                status = deviceContext->UsbAudioConfiguration->SetCurrentVolume(deviceContext, volumeContext->EntityID, (UCHAR)i, VolumeLevel);
+                if (NT_SUCCESS(status))
+                {
+                    volumeContext->VolumeLevel[i] = VolumeLevel;
+                }
             }
         }
     }
@@ -981,7 +981,7 @@ Return Value:
                 volumeCfg.ChannelsCount = numOfChannelsPerDevice;
                 volumeCfg.Name = &KSAUDFNAME_VOLUME_CONTROL;
                 volumeCfg.Callbacks = &volumeCallbacks;
-				TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, " - volume minimum %ld (0x%lx), maximum %ld (0x%lx), stepping delta %ld (0x%lx)", volumeCfg.Minimum, volumeCfg.Minimum, volumeCfg.Maximum, volumeCfg.Maximum, volumeCfg.SteppingDelta, volumeCfg.SteppingDelta);
+                TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, " - volume minimum %ld (0x%lx), maximum %ld (0x%lx), stepping delta %ld (0x%lx)", volumeCfg.Minimum, volumeCfg.Minimum, volumeCfg.Maximum, volumeCfg.Maximum, volumeCfg.SteppingDelta, volumeCfg.SteppingDelta);
 
                 WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, VOLUME_ELEMENT_CONTEXT);
                 attributes.ParentObject = circuit;
@@ -1502,20 +1502,29 @@ CodecR_VolumeChangeLevelNotification(
             TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, " - volume context entity ID 0x%02x, entity ID 0x%02x", volumeContext->EntityID, EntityID);
             if (volumeContext->EntityID == EntityID)
             {
+                bool            notify = false;
                 LONG            volume;
                 PDEVICE_CONTEXT deviceContext = GetDeviceContext(volumeContext->Device);
                 ASSERT(deviceContext != nullptr);
 
-                status = deviceContext->UsbAudioConfiguration->GetCurrentVolume(deviceContext, volumeContext->EntityID, 0, volume); // TBD
-                if (NT_SUCCESS(status))
+                for (ULONG i = 0; i < volumeContext->NumberOfChannels; ++i)
                 {
-					TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, " - get current volume %ld, entity ID 0x%02x, channel %d", volume, volumeContext->EntityID, 0);
-                    if (volume != volumeContext->VolumeLevel[0])
+                    status = deviceContext->UsbAudioConfiguration->GetCurrentVolume(deviceContext, volumeContext->EntityID, (UCHAR)i, volume);
+                    if (NT_SUCCESS(status))
                     {
-                        AcxVolumeChangeLevelNotification(circuitContext->VolumeElements[index]);
+                        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, " - get current volume %ld, entity ID 0x%02x, channel %d", volume, volumeContext->EntityID, i);
+                        if (volumeContext->VolumeLevel[i] != volume)
+                        {
+                            volumeContext->VolumeLevel[i] = volume;
+                            notify = true;
+                        }
                     }
-                    return status;
                 }
+                if (notify)
+                {
+                    AcxVolumeChangeLevelNotification(circuitContext->VolumeElements[index]);
+                }
+                return STATUS_SUCCESS;
             }
         }
     }
@@ -1552,20 +1561,29 @@ CodecR_MuteChangeStateNotification(
             TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, " - mute context entity ID 0x%02x, entity ID 0x%02x", muteContext->EntityID, EntityID);
             if (muteContext->EntityID == EntityID)
             {
+                bool            notify = false;
                 bool            mute;
                 PDEVICE_CONTEXT deviceContext = GetDeviceContext(muteContext->Device);
                 ASSERT(deviceContext != nullptr);
 
-                status = deviceContext->UsbAudioConfiguration->GetCurrentMute(deviceContext, muteContext->EntityID, 0, mute); // TBD
-				TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, " - get current mute %!bool!, entity ID 0x%02x", (mute != 0)? true: false, muteContext->EntityID);
-                if (NT_SUCCESS(status))
+                for (ULONG i = 0; i < muteContext->NumberOfChannels; ++i)
                 {
-                    if (mute != muteContext->MuteState[0])
+                    status = deviceContext->UsbAudioConfiguration->GetCurrentMute(deviceContext, muteContext->EntityID, (UCHAR)i, mute);
+                    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CIRCUIT, " - get current mute %!bool!, entity ID 0x%02x, channel %d", (mute != 0) ? true : false, muteContext->EntityID, i);
+                    if (NT_SUCCESS(status))
                     {
-                        AcxMuteChangeStateNotification(circuitContext->MuteElements[index]);
+                        if (muteContext->MuteState[i] != mute)
+                        {
+                            muteContext->MuteState[i] = mute;
+                            notify = true;
+                        }
                     }
-                    return status;
                 }
+                if (notify)
+                {
+                    AcxMuteChangeStateNotification(circuitContext->MuteElements[index]);
+                }
+                return STATUS_SUCCESS;
             }
         }
     }
