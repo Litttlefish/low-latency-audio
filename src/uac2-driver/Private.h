@@ -497,6 +497,7 @@ typedef struct _CODEC_CAPTURE_CIRCUIT_CONTEXT
     ACXVOLUME * VolumeElements;
     WDFMEMORY   MuteElementsMemory;
     ACXMUTE *   MuteElements;
+    ULONG       NumOfDevices;
     // ACXKEYWORDSPOTTER KeywordSpotter;
 } CODEC_CAPTURE_CIRCUIT_CONTEXT, *PCODEC_CAPTURE_CIRCUIT_CONTEXT;
 
@@ -545,6 +546,18 @@ EVT_ACX_PIN_RETRIEVE_NAME CodecC_EvtAcxPinRetrieveName;
 
 NONPAGED_CODE_SEG
 EVT_WDF_DEVICE_CONTEXT_CLEANUP CodecC_EvtPinContextCleanup;
+
+PAGED_CODE_SEG
+EVT_ACX_MUTE_ASSIGN_STATE CodecC_EvtMuteAssignState;
+
+PAGED_CODE_SEG
+EVT_ACX_MUTE_RETRIEVE_STATE CodecC_EvtMuteRetrieveState;
+// EVT_ACX_VOLUME_ASSIGN_LEVEL         CodecC_EvtVolumeAssignLevel;
+PAGED_CODE_SEG
+EVT_ACX_VOLUME_RETRIEVE_LEVEL CodecC_EvtVolumeRetrieveLevel;
+PAGED_CODE_SEG
+EVT_ACX_RAMPED_VOLUME_ASSIGN_LEVEL CodecC_EvtRampedVolumeAssignLevel;
+
 // EVT_ACX_KEYWORDSPOTTER_RETRIEVE_ARM     CodecC_EvtAcxKeywordSpotterRetrieveArm;
 // EVT_ACX_KEYWORDSPOTTER_ASSIGN_ARM       CodecC_EvtAcxKeywordSpotterAssignArm;
 // EVT_ACX_KEYWORDSPOTTER_ASSIGN_PATTERNS  CodecC_EvtAcxKeywordSpotterAssignPatterns;
@@ -559,6 +572,20 @@ CodecC_CreateCaptureCircuit(
     _In_ const UNICODE_STRING * CircuitName,
     _In_ const ULONG            SupportedSampleRate,
     _Out_ ACXCIRCUIT *          Circuit
+);
+
+PAGED_CODE_SEG
+NTSTATUS
+CodecC_VolumeChangeLevelNotification(
+    _In_ ACXCIRCUIT Cirtuit,
+    _In_ UCHAR      EntityID
+);
+
+PAGED_CODE_SEG
+NTSTATUS
+CodecC_MuteChangeStateNotification(
+    _In_ ACXCIRCUIT Cirtuit,
+    _In_ UCHAR      EntityID
 );
 
 /* make internal prototypes usable from C++ */

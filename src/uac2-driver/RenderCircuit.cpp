@@ -777,8 +777,8 @@ Return Value:
     ACX_CONNECTION *               connections = nullptr;
     UCHAR                          numOfChannels = 0;
     USHORT                         terminalType = 0;
-    UCHAR                          volumeUnitID = 0;
-    UCHAR                          muteUnitID = 0;
+    UCHAR                          volumeUnitID = USBAudioConfiguration::InvalidID;
+    UCHAR                          muteUnitID = USBAudioConfiguration::InvalidID;
     ULONG                          numOfDevices = 0;
     ULONG                          numOfConnections = 0;
     ULONG                          numOfRemainingChannels = 0;

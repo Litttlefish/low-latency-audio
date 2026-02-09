@@ -455,20 +455,22 @@ class USBAudioControlInterface : public USBAudioInterface
 
     _Success_(NT_SUCCESS(return))
     virtual NTSTATUS SearchOutputTerminalFromInputTerminal(
-        _In_ UCHAR     terminalLink,
-        _Out_ UCHAR &  numOfChannels,
-        _Out_ USHORT & terminalType,
-        _Out_ UCHAR &  volumeUnitID,
-        _Out_ UCHAR &  muteUnitID
+        _In_ PDEVICE_CONTEXT deviceContext,
+        _In_ UCHAR           terminalLink,
+        _Out_ UCHAR &        numOfChannels,
+        _Out_ USHORT &       terminalType,
+        _Out_ UCHAR &        volumeUnitID,
+        _Out_ UCHAR &        muteUnitID
     ) = 0;
 
     _Success_(NT_SUCCESS(return))
     virtual NTSTATUS SearchInputTerminalFromOutputTerminal(
-        _In_ UCHAR     terminalLink,
-        _Out_ UCHAR &  numOfChannels,
-        _Out_ USHORT & terminalType,
-        _Out_ UCHAR &  volumeUnitID,
-        _Out_ UCHAR &  muteUnitID
+        _In_ PDEVICE_CONTEXT deviceContext,
+        _In_ UCHAR           terminalLink,
+        _Out_ UCHAR &        numOfChannels,
+        _Out_ USHORT &       terminalType,
+        _Out_ UCHAR &        volumeUnitID,
+        _Out_ UCHAR &        muteUnitID
     ) = 0;
 
     virtual NTSTATUS UpdateCurrentValue(
@@ -799,22 +801,24 @@ class USBAudio1ControlInterface : public USBAudioControlInterface
     PAGED_CODE_SEG
     _Success_(NT_SUCCESS(return))
     virtual NTSTATUS SearchOutputTerminalFromInputTerminal(
-        _In_ UCHAR     terminalLink,
-        _Out_ UCHAR &  numOfChannels,
-        _Out_ USHORT & terminalType,
-        _Out_ UCHAR &  volumeUnitID,
-        _Out_ UCHAR &  muteUnitID
+        _In_ PDEVICE_CONTEXT deviceContext,
+        _In_ UCHAR           terminalLink,
+        _Out_ UCHAR &        numOfChannels,
+        _Out_ USHORT &       terminalType,
+        _Out_ UCHAR &        volumeUnitID,
+        _Out_ UCHAR &        muteUnitID
     );
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     _Success_(NT_SUCCESS(return))
     virtual NTSTATUS SearchInputTerminalFromOutputTerminal(
-        _In_ UCHAR     terminalLink,
-        _Out_ UCHAR &  numOfChannels,
-        _Out_ USHORT & terminalType,
-        _Out_ UCHAR &  volumeUnitID,
-        _Out_ UCHAR &  muteUnitID
+        _In_ PDEVICE_CONTEXT deviceContext,
+        _In_ UCHAR           terminalLink,
+        _Out_ UCHAR &        numOfChannels,
+        _Out_ USHORT &       terminalType,
+        _Out_ UCHAR &        volumeUnitID,
+        _Out_ UCHAR &        muteUnitID
     );
 
     __drv_maxIRQL(DISPATCH_LEVEL)
@@ -1213,22 +1217,24 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
     PAGED_CODE_SEG
     _Success_(NT_SUCCESS(return))
     virtual NTSTATUS SearchOutputTerminalFromInputTerminal(
-        _In_ UCHAR     terminalLink,
-        _Out_ UCHAR &  numOfChannels,
-        _Out_ USHORT & terminalType,
-        _Out_ UCHAR &  volumeUnitID,
-        _Out_ UCHAR &  muteUnitID
+        _In_ PDEVICE_CONTEXT deviceContext,
+        _In_ UCHAR           terminalLink,
+        _Out_ UCHAR &        numOfChannels,
+        _Out_ USHORT &       terminalType,
+        _Out_ UCHAR &        volumeUnitID,
+        _Out_ UCHAR &        muteUnitID
     );
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     _Success_(NT_SUCCESS(return))
     virtual NTSTATUS SearchInputTerminalFromOutputTerminal(
-        _In_ UCHAR     terminalLink,
-        _Out_ UCHAR &  numOfChannels,
-        _Out_ USHORT & terminalType,
-        _Out_ UCHAR &  volumeUnitID,
-        _Out_ UCHAR &  muteUnitID
+        _In_ PDEVICE_CONTEXT deviceContext,
+        _In_ UCHAR           terminalLink,
+        _Out_ UCHAR &        numOfChannels,
+        _Out_ USHORT &       terminalType,
+        _Out_ UCHAR &        volumeUnitID,
+        _Out_ UCHAR &        muteUnitID
     );
 
     __drv_maxIRQL(DISPATCH_LEVEL)
@@ -1887,22 +1893,24 @@ class USBAudioInterfaceInfo
     PAGED_CODE_SEG
     _Success_(NT_SUCCESS(return))
     NTSTATUS SearchOutputTerminalFromInputTerminal(
-        _In_ UCHAR     terminalLink,
-        _Out_ UCHAR &  numOfChannels,
-        _Out_ USHORT & terminalType,
-        _Out_ UCHAR &  volumeUnitID,
-        _Out_ UCHAR &  muteUnitID
+        _In_ PDEVICE_CONTEXT deviceContext,
+        _In_ UCHAR           terminalLink,
+        _Out_ UCHAR &        numOfChannels,
+        _Out_ USHORT &       terminalType,
+        _Out_ UCHAR &        volumeUnitID,
+        _Out_ UCHAR &        muteUnitID
     );
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     _Success_(NT_SUCCESS(return))
     NTSTATUS SearchInputTerminalFromOutputTerminal(
-        _In_ UCHAR     terminalLink,
-        _Out_ UCHAR &  numOfChannels,
-        _Out_ USHORT & terminalType,
-        _Out_ UCHAR &  volumeUnitID,
-        _Out_ UCHAR &  muteUnitID
+        _In_ PDEVICE_CONTEXT deviceContext,
+        _In_ UCHAR           terminalLink,
+        _Out_ UCHAR &        numOfChannels,
+        _Out_ USHORT &       terminalType,
+        _Out_ UCHAR &        volumeUnitID,
+        _Out_ UCHAR &        muteUnitID
     );
 
     __drv_maxIRQL(DISPATCH_LEVEL)
@@ -2444,22 +2452,24 @@ class USBAudioConfiguration
     PAGED_CODE_SEG
     _Success_(NT_SUCCESS(return))
     NTSTATUS SearchOutputTerminalFromInputTerminal(
-        _In_ UCHAR     terminalLink,
-        _Out_ UCHAR &  numOfChannels,
-        _Out_ USHORT & terminalType,
-        _Out_ UCHAR &  volumeUnitID,
-        _Out_ UCHAR &  muteUnitID
+        _In_ PDEVICE_CONTEXT deviceContext,
+        _In_ UCHAR           terminalLink,
+        _Out_ UCHAR &        numOfChannels,
+        _Out_ USHORT &       terminalType,
+        _Out_ UCHAR &        volumeUnitID,
+        _Out_ UCHAR &        muteUnitID
     );
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     _Success_(NT_SUCCESS(return))
     NTSTATUS SearchInputTerminalFromOutputTerminal(
-        _In_ UCHAR     terminalLink,
-        _Out_ UCHAR &  numOfChannels,
-        _Out_ USHORT & terminalType,
-        _Out_ UCHAR &  volumeUnitID,
-        _Out_ UCHAR &  muteUnitID
+        _In_ PDEVICE_CONTEXT deviceContext,
+        _In_ UCHAR           terminalLink,
+        _Out_ UCHAR &        numOfChannels,
+        _Out_ USHORT &       terminalType,
+        _Out_ UCHAR &        volumeUnitID,
+        _Out_ UCHAR &        muteUnitID
     );
 
     __drv_maxIRQL(DISPATCH_LEVEL)
