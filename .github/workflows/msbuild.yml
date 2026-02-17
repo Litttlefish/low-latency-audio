@@ -1,0 +1,69 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: MSBuild
+
+
+on:
+  #push:
+    #branches: [ "main" ]
+  #pull_request:
+    #branches: [ "main" ]
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      tag_name:
+        description: 'random info here'
+        required: false
+
+env:
+  # Path to the solution file relative to the root of the project.
+  SOLUTION_FILE_PATH: .
+
+  # Configuration type to build.
+  # You can convert this to a build matrix if you need coverage of multiple configuration types.
+  # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+  BUILD_CONFIGURATION: Release
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/checkout@v4
+      with:
+        repository: audiosdk/asio
+        path: asio_sdk_temp
+      
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Place ASIO common folder
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      shell: powershell
+      run: Copy-Item -Path "./asio_sdk_temp/common" -Destination "./src/uac2-asio/asio" -Recurse -Force
+        
+    - uses: humbletim/vsdevenv-shell@v2
+
+    - uses: NuGet/setup-nuget@v2.0.0
+
+    - name: Build
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      # Add additional options to the MSBuild command line here (like platform or verbosity level).
+      # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
+      shell: vsdevenv x64 powershell {0}
+      run: .\build\build.ps1
+      
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: compiles-${{matrix.configuration}}
+        path: build\release\x64\Release
+        retention-days: 3
