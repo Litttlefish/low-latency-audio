@@ -1778,7 +1778,7 @@ class USBAudioConfiguration
     PAGED_CODE_SEG
     NTSTATUS CreateInterface(
         _In_ const PUSB_INTERFACE_DESCRIPTOR descriptor,
-        _Out_ USBAudioInterface *&           usbAudioInterface
+        _Inout_ USBAudioInterface *&         usbAudioInterface
     );
 
     __drv_maxIRQL(PASSIVE_LEVEL)

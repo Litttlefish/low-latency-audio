@@ -5129,8 +5129,12 @@ USBAudioConfiguration::CreateInterface(const PUSB_INTERFACE_DESCRIPTOR descripto
             break;
         }
 #else
-        // only USB Audio 2.0
-        status = STATUS_NOT_SUPPORTED;
+		// 
+		// If the Audio Interface Protocol is not USB Audio 2.0 (IP_VERSION_02_00), ignore this interface instead of treating it as an error.
+		// This allows the driver to operate correctly even when unexpected interfaces such as USB Audio 1.0 are mixed in the descriptor.
+		// 
+        usbAudioInterface = nullptr;
+        status = STATUS_SUCCESS;
 #endif
     }
     if (usbAudioInterface != nullptr)
@@ -5216,6 +5220,14 @@ USBAudioConfiguration::ParseInterfaceDescriptor(const PUSB_INTERFACE_DESCRIPTOR 
 
         lastInterface = nullptr;
         status = CreateInterface(descriptor, lastInterface);
+
+		// 
+		// If an interface fails to be created, treat it as absent until the next interface is encountered.
+		// 
+        if (lastInterface == nullptr)
+        {
+            hasTargetInterface = false;
+        }
     }
     else
     {
@@ -5239,6 +5251,8 @@ USBAudioConfiguration::ParseEndpointDescriptor(PUSB_ENDPOINT_DESCRIPTOR descript
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Entry");
 
     RETURN_NTSTATUS_IF_TRUE(descriptor == nullptr, STATUS_INVALID_PARAMETER);
+	// If the interface is not supported, skip this processing but complete normally.
+    RETURN_NTSTATUS_IF_TRUE(lastInterface == nullptr, STATUS_SUCCESS);
     RETURN_NTSTATUS_IF_TRUE(descriptor->bLength != NS_USBAudio::SIZE_OF_USB_ENDPOINT_DESCRIPTOR, STATUS_DEVICE_DATA_ERROR);
 
     if ((lastInterface != nullptr) && (descriptor->bLength >= NS_USBAudio::SIZE_OF_USB_ENDPOINT_DESCRIPTOR))
@@ -5279,6 +5293,8 @@ USBAudioConfiguration::ParseEndpointCompanionDescriptor(PUSB_SUPERSPEED_ENDPOINT
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Entry");
 
     RETURN_NTSTATUS_IF_TRUE(descriptor == nullptr, STATUS_INVALID_PARAMETER);
+	// If the interface is not supported, skip this processing but complete normally.
+    RETURN_NTSTATUS_IF_TRUE(lastInterface == nullptr, STATUS_SUCCESS);
     RETURN_NTSTATUS_IF_TRUE(descriptor->bLength != NS_USBAudio::SIZE_OF_USB_SSENDPOINT_COMPANION_DESCRIPTOR, STATUS_DEVICE_DATA_ERROR);
 
     if ((lastInterface != nullptr) && (descriptor->bLength >= NS_USBAudio::SIZE_OF_USB_ENDPOINT_DESCRIPTOR))
@@ -5306,6 +5322,10 @@ USBAudioConfiguration::ParseCSInterface(const NS_USBAudio::PCS_GENERIC_AUDIO_DES
     PAGED_CODE();
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Entry");
+
+    RETURN_NTSTATUS_IF_TRUE(descriptor == nullptr, STATUS_INVALID_PARAMETER);
+	// If the interface is not supported, skip this processing but complete normally.
+    RETURN_NTSTATUS_IF_TRUE(lastInterface == nullptr, STATUS_SUCCESS);
 
     if ((lastInterface != nullptr) && (descriptor->bLength >= sizeof(NS_USBAudio::CS_GENERIC_AUDIO_DESCRIPTOR)))
     {
@@ -5392,6 +5412,10 @@ USBAudioConfiguration::ParseCSEndpoint(NS_USBAudio::PCS_GENERIC_AUDIO_DESCRIPTOR
     PAGED_CODE();
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Entry");
+
+    RETURN_NTSTATUS_IF_TRUE(descriptor == nullptr, STATUS_INVALID_PARAMETER);
+	// If the interface is not supported, skip this processing but complete normally.
+    RETURN_NTSTATUS_IF_TRUE(lastInterface == nullptr, STATUS_SUCCESS);
 
     if ((lastInterface != nullptr) && (descriptor->bLength >= sizeof(NS_USBAudio::CS_GENERIC_AUDIO_DESCRIPTOR)) && lastInterface->IsStreamInterface())
     {
