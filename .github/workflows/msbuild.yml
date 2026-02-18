@@ -50,7 +50,7 @@ jobs:
       shell: powershell
       run: Copy-Item -Path "./asio_sdk_temp/common" -Destination "./src/uac2-asio/asio" -Recurse -Force
 
-    - name: Place ASIO common folder
+    - name: Setup Driver env
       working-directory: ${{env.GITHUB_WORKSPACE}}
       shell: powershell
       run: |
