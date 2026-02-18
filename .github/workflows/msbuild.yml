@@ -76,12 +76,6 @@ jobs:
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       shell: vsdevenv x64 powershell {0}
       run: |
-        $sdkVer = "10.0.26100.0"
-        $basePath = "C:\Program Files (x86)\Windows Kits\10"
-        
-        # 注入项目需要的环境变量
-        $env:DDK_INC_PATH = "$basePath\Include\$sdkVer\km\"
-        $env:DDK_LIB_PATH = "$basePath\Lib\$sdkVer\km\"
         .\build\build.ps1
       
     - name: Upload artifacts
