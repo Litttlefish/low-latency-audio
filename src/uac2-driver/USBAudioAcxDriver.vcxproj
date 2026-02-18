@@ -129,7 +129,6 @@
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <Import Project="$(WDKTargetsPath)\Microsoft.DriverKit.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
@@ -258,7 +257,6 @@
     <ResourceCompile Include="USBAudioAcxDriver.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <Import Project="$(WDKTargetsPath)\Microsoft.DriverKit.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="packages\Microsoft.Windows.ImplementationLibrary.1.0.250325.1\build\native\Microsoft.Windows.ImplementationLibrary.targets" Condition="Exists('packages\Microsoft.Windows.ImplementationLibrary.1.0.250325.1\build\native\Microsoft.Windows.ImplementationLibrary.targets')" />
   </ImportGroup>
