@@ -10,9 +10,10 @@ if ($env:GITHUB_ACTIONS -eq 'true') {
         winget install --source winget --exact --id Microsoft.WindowsWDK.10.0.26100
     }
     Write-Host "Existance: $(Test-Path $wdkExtensionPath)"
-    $vsix = Get-ChildItem -Path $wdkExtensionPath .\WDK.vsix -Recurse | Select-Object -First 1
+    $vsix = Get-ChildItem -Path $env:WindowsSdkDir .\WDK.vsix -Recurse | Select-Object -First 1
     Write-Host "Locating WDK VSIX Extension..." -ForegroundColor Cyan
     if ($null -ne $vsix) {
+        Write-Host "Existance: $($vsix.FullName)"
         Write-Host "Installing WDK VSIX Extension..." -ForegroundColor Cyan
         Start-Process -FilePath "C:\Program Files (x86)\Microsoft Visual Studio\Installer\VSIXInstaller.exe" -ArgumentList "/q", "/admin", "`"$($vsix.FullName)`"" -Wait -PassThru
     }
@@ -168,6 +169,7 @@ foreach($configuration in $configurations)
     }
 
 }
+
 
 
 
