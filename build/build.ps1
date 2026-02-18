@@ -3,25 +3,16 @@ $ErrorActionPreference = "Stop"
 
 if ($env:GITHUB_ACTIONS -eq 'true') {
     Write-Host "CI Environment detected. Ensuring WDK is installed..." -ForegroundColor Cyan
-    $vsixPaths = @(
-      "C:\Program Files\Windows Kits\10\Vsix\VS2022\10.0.26100.0\WDK.vsix",
-      "C:\Program Files\Windows Kits\10\Vsix\VS2022\WDK.vsix"
-    )
-    
-    $vsix = $vsixPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
-    
-    if ($vsix) {
-      Write-Host "Found WDK VSIX at: $vsix" -ForegroundColor Green
-      
-      # 查找VSIXInstaller
-      $installer = "C:\Program Files\Microsoft Visual Studio\Installer\VSIXInstaller.exe"
-      if (Test-Path $installer) {
-        Write-Host "Registering VSIX extension..." -ForegroundColor Cyan
-        & $installer /q /admin $vsix
-        Write-Host "VSIX registration complete" -ForegroundColor Green
-      }
-    } else {
-      Write-Host "WDK VSIX not found, but WDK components are installed" -ForegroundColor Yellow
+    $wdkExtensionPath = $env:WindowsSdkDir + "Vsix\"
+    if (-not (Test-Path $wdkExtensionPath)) {
+        winget install --source winget --exact --id Microsoft.WindowsSDK.10.0.26100
+        winget install --source winget --exact --id Microsoft.WindowsWDK.10.0.26100
+    }
+    $vsix = Get-ChildItem -Path $wdkExtensionPath -Filter "WDK.vsix" -Recurse | Select-Object -First 1
+    Write-Host "Locating WDK VSIX Extension..." -ForegroundColor Cyan
+    if ($null -ne $vsix) {
+        Write-Host "Installing WDK VSIX Extension..." -ForegroundColor Cyan
+        Start-Process -FilePath "C:\Program Files (x86)\Microsoft Visual Studio\Installer\VSIXInstaller.exe" -ArgumentList "/q", "/admin", "`"$($vsix.FullName)`"" -Wait -PassThru
     }
 }
 
@@ -175,6 +166,7 @@ foreach($configuration in $configurations)
     }
 
 }
+
 
 
 
