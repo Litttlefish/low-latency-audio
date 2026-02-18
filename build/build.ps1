@@ -64,10 +64,10 @@ $stagingFolder = Join-Path $RepoRoot "build" "staging"
 $releaseFolder = Join-Path $RepoRoot "build" "release"
 $installerProjectFolder = Join-Path $sourceRoot "installer"
 
-$acxSolution = Join-Path $sourceRoot "uac2-driver"        "USBAudioAcxDriver.sln"
-$asioSolution = Join-Path $sourceRoot "uac2-asio"          "USBAsio.sln"
+$acxSolution = Join-Path $sourceRoot "uac2-driver" "USBAudioAcxDriver.sln"
+$asioSolution = Join-Path $sourceRoot "uac2-asio" "USBAsio.sln"
 $controlPanelSolution = Join-Path $sourceRoot "asio-control-panel" "USBAsioControlPanel.sln"
-$installerProject = Join-Path $installerProjectFolder          "asio-installer.sln"
+$installerProject = Join-Path $installerProjectFolder "asio-installer.sln"
 
 foreach ($sln in @($acxSolution, $asioSolution, $controlPanelSolution, $installerProject)) {
     if (-not (Test-Path $sln)) {
@@ -206,6 +206,7 @@ Write-Host "Staging folder : $stagingFolder"
 Write-Host "Release folder : $releaseFolder"
 
 Write-Host ""
+
 
 
 
