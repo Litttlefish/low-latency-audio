@@ -45,6 +45,8 @@ jobs:
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
 
+    - uses: johnnynunez/gha-setup-vsdevenv@v1
+
     - name: Place ASIO common folder
       working-directory: ${{env.GITHUB_WORKSPACE}}
       shell: powershell
