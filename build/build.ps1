@@ -37,7 +37,8 @@ if ($env:GITHUB_ACTIONS -eq 'true') {
     Write-Host "CI Environment detected. Ensuring WDK is installed..." -ForegroundColor Cyan
     $wdkExtensionPath = "C:\Program Files (x86)\Windows Kits\10\Vsix\VS2022"
     if (-not (Test-Path $wdkExtensionPath)) {
-        choco install wdk -y
+        winget install --source winget --exact --id Microsoft.WindowsSDK.10.0.26100
+        winget install --source winget --exact --id Microsoft.WindowsWDK.10.0.26100
         $vsix = Get-ChildItem -Path $wdkExtensionPath -Filter "WDK.vsix" -Recurse | Select-Object -First 1
         if ($vsix) {
             Write-Host "Installing WDK VSIX Extension..." -ForegroundColor Cyan
@@ -193,4 +194,5 @@ Write-Host ""
 Write-Host "=== Build complete ===" -ForegroundColor Green
 Write-Host "Staging folder : $stagingFolder"
 Write-Host "Release folder : $releaseFolder"
+
 Write-Host ""
