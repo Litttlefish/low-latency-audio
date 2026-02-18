@@ -33,6 +33,19 @@ Write-Host "Repo root     : $RepoRoot"
 Write-Host "Configuration : $Configuration"
 Write-Host ""
 
+if ($env:GITHUB_ACTIONS -eq 'true') {
+    Write-Host "CI Environment detected. Ensuring WDK is installed..." -ForegroundColor Cyan
+    $wdkExtensionPath = "C:\Program Files (x86)\Windows Kits\10\Vsix\VS2022"
+    if (-not (Test-Path $wdkExtensionPath)) {
+        choco install wdk -y
+        $vsix = Get-ChildItem -Path $wdkExtensionPath -Filter "WDK.vsix" -Recurse | Select-Object -First 1
+        if ($vsix) {
+            Write-Host "Installing WDK VSIX Extension..." -ForegroundColor Cyan
+            Start-Process -FilePath "C:\Program Files (x86)\Microsoft Visual Studio\Installer\VSIXInstaller.exe" -ArgumentList "/q", "/admin", $vsix.FullName -Wait
+        }
+    }
+}
+
 $sourceRoot = Join-Path $RepoRoot "src"
 $vsfilesFolder = Join-Path $sourceRoot "vsfiles"
 $vsfilesFolderOut = Join-Path $vsfilesFolder "out"
