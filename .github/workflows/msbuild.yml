@@ -67,5 +67,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: compiles-${{matrix.configuration}}
-        path: build\release\x64\Release
+        path: .\build\release\*
         retention-days: 3
