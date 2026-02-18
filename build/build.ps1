@@ -1,43 +1,11 @@
-param(
-    [string]$RepoRoot = "",
-    [ValidateSet("Debug", "Release")]
-    [string]$Configuration = "Release"
-)
-
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-
-function Assert-MSBuildSuccess {
-    param([string]$StepName)
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "ERROR: MSBuild failed for '$StepName'. Exit code $LASTEXITCODE" -ForegroundColor Red
-        exit $LASTEXITCODE
-    }
-}
-
-if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
-    $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-}
-
-if (-not (Test-Path (Join-Path $RepoRoot "src"))) {
-    Write-Host "ERROR: '$RepoRoot' does not look like the low-latency-audio repo (missing 'src' folder)." -ForegroundColor Red
-    exit 1
-}
-
-if (-not (Get-Command msbuild.exe -ErrorAction SilentlyContinue)) {
-    Write-Host "ERROR: msbuild.exe not found in PATH. Please run from a VS Developer Command Prompt." -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Repo root     : $RepoRoot"
-Write-Host "Configuration : $Configuration"
-Write-Host ""
 
 if ($env:GITHUB_ACTIONS -eq 'true') {
     Write-Host "CI Environment detected. Ensuring WDK is installed..." -ForegroundColor Cyan
     $vsixPaths = @(
-      "C:\Program Files (x86)\Windows Kits\10\Vsix\VS2022\10.0.26100.0\WDK.vsix",
-      "C:\Program Files (x86)\Windows Kits\10\Vsix\VS2022\WDK.vsix"
+      "C:\Program Files\Windows Kits\10\Vsix\VS2022\10.0.26100.0\WDK.vsix",
+      "C:\Program Files\Windows Kits\10\Vsix\VS2022\WDK.vsix"
     )
     
     $vsix = $vsixPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
@@ -46,7 +14,7 @@ if ($env:GITHUB_ACTIONS -eq 'true') {
       Write-Host "Found WDK VSIX at: $vsix" -ForegroundColor Green
       
       # 查找VSIXInstaller
-      $installer = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\VSIXInstaller.exe"
+      $installer = "C:\Program Files\Microsoft Visual Studio\Installer\VSIXInstaller.exe"
       if (Test-Path $installer) {
         Write-Host "Registering VSIX extension..." -ForegroundColor Cyan
         & $installer /q /admin $vsix
@@ -57,158 +25,156 @@ if ($env:GITHUB_ACTIONS -eq 'true') {
     }
 }
 
-$sourceRoot = Join-Path $RepoRoot "src"
-$vsfilesFolder = Join-Path $sourceRoot "vsfiles"
-$vsfilesFolderOut = Join-Path $vsfilesFolder "out"
-$stagingFolder = Join-Path $RepoRoot "build" "staging"
-$releaseFolder = Join-Path $RepoRoot "build" "release"
-$installerProjectFolder = Join-Path $sourceRoot "installer"
+$repoRoot = ".\"
+$sourceRoot = $repoRoot + "src\"
+$vsfilesFolder = $sourceRoot + "vsfiles\"
+$vsfilesFolderOut = $vsfilesFolder + "out\"
+$stagingFolder = $repoRoot + "build\staging\"
+$releaseFolder = $repoRoot + "build\release\"
+$installerProjectFolder = $sourceRoot + "installer\"
 
-$acxSolution = Join-Path $sourceRoot "uac2-driver" "USBAudioAcxDriver.sln"
-$asioSolution = Join-Path $sourceRoot "uac2-asio" "USBAsio.sln"
-$controlPanelSolution = Join-Path $sourceRoot "asio-control-panel" "USBAsioControlPanel.sln"
-$installerProject = Join-Path $installerProjectFolder "asio-installer.sln"
+$asioSolution = $sourceRoot + "uac2-asio\USBAsio.sln"
+$acxSolution =  $sourceRoot + "uac2-driver\USBAudioAcxDriver.sln"
+$controlPanelSolution =  $sourceRoot + "asio-control-panel\USBAsioControlPanel.sln"
+$installerProject = $installerProjectFolder + "asio-installer.sln"
 
-foreach ($sln in @($acxSolution, $asioSolution, $controlPanelSolution, $installerProject)) {
-    if (-not (Test-Path $sln)) {
-        Write-Host "ERROR: Solution file not found: $sln" -ForegroundColor Red
-        exit 1
+#$configurations = ("Debug", "Release")
+$configurations = ("Release")
+
+
+
+Write-Host "Creating folders..."
+New-Item -Path $stagingFolder -ItemType Directory -Force
+New-Item -Path $vsfilesFolder -ItemType Directory -Force
+New-Item -Path $releaseFolder -ItemType Directory -Force
+
+
+Write-Host "Cleaning folders..."
+Remove-Item "$stagingFolder*" -Recurse -Force
+Remove-Item "$vsfilesFolder*" -Recurse -Force
+Remove-Item "$releaseFolder*" -Recurse -Force
+
+
+foreach($configuration in $configurations)
+{
+    # Build ACX Driver for x64 and Arm64
+
+    msbuild.exe -t:restore $acxSolution -p:RestorePackagesConfig=true
+
+    foreach($acxPlatform in ("x64", "Arm64"))
+    {
+        Write-Host "Building ACX Driver: $configuration|$acxPlatform"
+        msbuild.exe -p:Platform=$acxPlatform -p:Configuration=$configuration -verbosity:normal -target:Rebuild $acxSolution
+        if ($LASTEXITCODE -ne 0)
+        {
+            Write-Host "MSBuild failed for $configuration $acxPlatform build. Exit code $LASTEXITCODE"
+            exit;
+        }
+
+        # this is where the driver files (cat, sys, inf) are output to
+        $driverOutputFolder = "$vsfilesFolderOut\USBAudioAcxDriver\$acxPlatform\$configuration\USBAudioAcxDriver\"
+        Write-Host $driverOutputFolder
+
+        # ensure the destination folders exist
+        $stagingTargetFolder = "$stagingFolder\$acxPlatform\$configuration\"
+        New-Item -Path $stagingTargetFolder -ItemType Directory
+
+        # copy output files to staging
+        Copy-Item -Path "$driverOutputFolder\*.*" -Destination $stagingTargetFolder
+
+        Write-Host
     }
-}
+    Write-Host
 
-Write-Host "Creating / cleaning output folders..."
+    # build ASIO driver for x64 and Arm64EC
 
-foreach ($dir in @($stagingFolder, $vsfilesFolder, $releaseFolder)) {
-    if (Test-Path $dir) {
-        Remove-Item "$dir\*" -Recurse -Force -ErrorAction SilentlyContinue
+    msbuild.exe -t:restore $asioSolution -p:RestorePackagesConfig=true
+
+    foreach($asioPlatform in ("x64", "Arm64EC"))
+    {
+        Write-Host "Building ASIO Driver: $configuration|$asioPlatform"
+        msbuild.exe -p:Platform=$asioPlatform -p:Configuration=$configuration -verbosity:normal -target:Rebuild $asioSolution 
+        if ($LASTEXITCODE -ne 0)
+        {
+            Write-Host "MSBuild failed for $configuration $asioPlatform build. Exit code $LASTEXITCODE"
+            exit;
+        }
+
+        # this is where the ASIO files (dll, pdb) are output to
+        $asioOutputFolder = "$vsfilesFolderOut\USBAsio\$asioPlatform\$configuration\"
+        Write-Host $asioOutputFolder
+
+        # ensure the destination folders exist. We need to map the destination folder
+        # because Arm64X puts the output in Arm64EC output folder
+
+        if ($asioPlatform -eq "Arm64EC")
+        {
+            $destinationAsioPlatform = "Arm64"
+        }
+        else 
+        {
+            $destinationAsioPlatform = "x64"
+        }
+
+        $stagingTargetFolder = "$stagingFolder\$destinationAsioPlatform\$configuration\"
+        #New-Item -Path $stagingTargetFolder -ItemType Directory
+
+            # copy output files to staging
+        Copy-Item -Path "$asioOutputFolder*.dll" -Destination $stagingTargetFolder
+        Copy-Item -Path "$asioOutputFolder*.pdb" -Destination $stagingTargetFolder
+
+        Write-Host
     }
-    New-Item -Path $dir -ItemType Directory -Force | Out-Null
-}
+    Write-Host
 
-Write-Host ""
+    # build ASIO Control Panel dialog for x64 and Arm64
 
-Write-Host "=== Restoring NuGet packages for ACX Driver ===" -ForegroundColor Cyan
-msbuild.exe -t:restore $acxSolution -p:RestorePackagesConfig=true
-Assert-MSBuildSuccess "ACX Driver NuGet restore"
+    msbuild.exe -t:restore $controlPanelSolution -p:RestorePackagesConfig=true
 
-foreach ($platform in @("x64", "ARM64")) {
-    Write-Host ""
-    Write-Host "--- Building ACX Driver: $Configuration | $platform ---" -ForegroundColor Yellow
+    foreach($controlPanelPlatform in ("x64", "Arm64"))
+    {
+        Write-Host "Building Control Panel:  $configuration|$controlPanelPlatform"
+        msbuild.exe -p:Platform=$controlPanelPlatform -p:Configuration=$configuration -verbosity:normal -target:Rebuild $controlPanelSolution
 
-    msbuild.exe -p:Platform=$platform `
-        -p:Configuration=$Configuration `
-        -verbosity:normal `
-        -target:Rebuild `
-        $acxSolution
+        # this is where the ASIO files (dll, pdb) are output to
+        $controlPanelOutputFolder = "$vsfilesFolderOut\USBAsioControlPanel\$controlPanelPlatform\$configuration\"
+        Write-Host $controlPanelOutputFolder
 
-    Assert-MSBuildSuccess "ACX Driver $Configuration|$platform"
+        # ensure the destination folders exist. We need to map the destination folder
+        # because Arm64X puts the output in Arm64EC output folder
 
-    $driverOutputFolder = Join-Path $vsfilesFolderOut "USBAudioAcxDriver" $platform $Configuration "USBAudioAcxDriver"
-    Write-Host "  Output: $driverOutputFolder"
+        $stagingTargetFolder = "$stagingFolder\$controlPanelPlatform\$configuration\"
 
-    $stagingTarget = Join-Path $stagingFolder $platform $Configuration
-    New-Item -Path $stagingTarget -ItemType Directory -Force | Out-Null
+        #New-Item -Path $stagingTargetFolder -ItemType Directory
 
-    Copy-Item -Path (Join-Path $driverOutputFolder "*.*") -Destination $stagingTarget -ErrorAction SilentlyContinue
-}
+            # copy output files to staging
+        Copy-Item -Path "$controlPanelOutputFolder*.exe" -Destination $stagingTargetFolder
 
-Write-Host ""
+        Write-Host
 
-Write-Host "=== Restoring NuGet packages for ASIO Driver ===" -ForegroundColor Cyan
-msbuild.exe -t:restore $asioSolution -p:RestorePackagesConfig=true
-Assert-MSBuildSuccess "ASIO Driver NuGet restore"
-
-foreach ($platform in @("x64", "ARM64EC")) {
-    Write-Host ""
-    Write-Host "--- Building ASIO Driver: $Configuration | $platform ---" -ForegroundColor Yellow
-
-    msbuild.exe -p:Platform=$platform `
-        -p:Configuration=$Configuration `
-        -verbosity:normal `
-        -target:Rebuild `
-        $asioSolution
-
-    Assert-MSBuildSuccess "ASIO Driver $Configuration|$platform"
-
-    $asioOutputFolder = Join-Path $vsfilesFolderOut "USBAsio" $platform $Configuration
-    Write-Host "  Output: $asioOutputFolder"
-
-    if ($platform -eq "ARM64EC") {
-        $destinationPlatform = "ARM64"
-    }
-    else {
-        $destinationPlatform = "x64"
+        #Copy-Item -Path "$sourceRoot\USBAsioControlPanel\USBAsioControlPanel.exe" -Destination $stagingTargetFolder
     }
 
-    $stagingTarget = Join-Path $stagingFolder $destinationPlatform $Configuration
-    New-Item -Path $stagingTarget -ItemType Directory -Force | Out-Null
+    # build installers
+    Write-Host "Building installers..."
 
-    Copy-Item -Path (Join-Path $asioOutputFolder "*.dll") -Destination $stagingTarget -ErrorAction SilentlyContinue
-    Copy-Item -Path (Join-Path $asioOutputFolder "*.pdb") -Destination $stagingTarget -ErrorAction SilentlyContinue
+    foreach($installerPlatform in ("x64", "Arm64"))
+    {
+        msbuild.exe -p:Platform=$installerPlatform -p:Configuration=$configuration -verbosity:normal -target:Rebuild $installerProject 
+
+        if ($LASTEXITCODE -ne 0)
+        {
+            Write-Host "MSBuild failed for $configuration $installerPlatform installer build. Exit code $LASTEXITCODE"
+            exit;
+        }
+
+        $releaseTargetFolder = "$releaseFolder\$installerPlatform\$configuration\"
+        New-Item -Path $releaseTargetFolder -ItemType Directory
+
+        Copy-Item -Path "$installerProjectFolder\bin\$installerPlatform\$configuration\*.msi" -Destination "$releaseTargetFolder"
+    }
+
 }
-
-Write-Host ""
-
-Write-Host "=== Restoring NuGet packages for Control Panel ===" -ForegroundColor Cyan
-msbuild.exe -t:restore $controlPanelSolution -p:RestorePackagesConfig=true
-Assert-MSBuildSuccess "Control Panel NuGet restore"
-
-foreach ($platform in @("x64", "ARM64")) {
-    Write-Host ""
-    Write-Host "--- Building Control Panel: $Configuration | $platform ---" -ForegroundColor Yellow
-
-    msbuild.exe -p:Platform=$platform `
-        -p:Configuration=$Configuration `
-        -verbosity:normal `
-        -target:Rebuild `
-        $controlPanelSolution
-
-    Assert-MSBuildSuccess "Control Panel $Configuration|$platform"
-
-    $controlPanelOutputFolder = Join-Path $vsfilesFolderOut "USBAsioControlPanel" $platform $Configuration
-    Write-Host "  Output: $controlPanelOutputFolder"
-
-    $stagingTarget = Join-Path $stagingFolder $platform $Configuration
-    New-Item -Path $stagingTarget -ItemType Directory -Force | Out-Null
-
-    Copy-Item -Path (Join-Path $controlPanelOutputFolder "*.exe") -Destination $stagingTarget -ErrorAction SilentlyContinue
-}
-
-Write-Host ""
-
-Write-Host "=== Building Installers ===" -ForegroundColor Cyan
-
-foreach ($platform in @("x64", "ARM64")) {
-    Write-Host ""
-    Write-Host "--- Building Installer: $Configuration | $platform ---" -ForegroundColor Yellow
-
-    $defineConstants = "StagingSourceRootFolder=$stagingFolder"
-
-    msbuild.exe -p:Platform=$platform `
-        -p:Configuration=$Configuration `
-        -p:DefineConstants="$defineConstants" `
-        -verbosity:normal `
-        -target:Rebuild `
-        $installerProject
-
-    Assert-MSBuildSuccess "Installer $Configuration|$platform"
-
-    $releaseTarget = Join-Path $releaseFolder $platform $Configuration
-    New-Item -Path $releaseTarget -ItemType Directory -Force | Out-Null
-
-    $installerBinFolder = Join-Path $installerProjectFolder "bin" $platform $Configuration
-    Copy-Item -Path (Join-Path $installerBinFolder "*.msi") -Destination $releaseTarget -ErrorAction SilentlyContinue
-}
-
-Write-Host ""
-Write-Host "=== Build complete ===" -ForegroundColor Green
-Write-Host "Staging folder : $stagingFolder"
-Write-Host "Release folder : $releaseFolder"
-
-Write-Host ""
-
-
-
 
 
 
