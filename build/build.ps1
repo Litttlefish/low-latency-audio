@@ -40,6 +40,7 @@ if ($env:GITHUB_ACTIONS -eq 'true') {
         winget install --source winget --exact --id Microsoft.WindowsSDK.10.0.26100
         winget install --source winget --exact --id Microsoft.WindowsWDK.10.0.26100
         $vsix = Get-ChildItem -Path $wdkExtensionPath -Filter "WDK.vsix" -Recurse | Select-Object -First 1
+        Write-Host "Locating WDK VSIX Extension..." -ForegroundColor Cyan
         if ($vsix) {
             Write-Host "Installing WDK VSIX Extension..." -ForegroundColor Cyan
             Start-Process -FilePath "C:\Program Files (x86)\Microsoft Visual Studio\Installer\VSIXInstaller.exe" -ArgumentList "/q", "/admin", $vsix.FullName -Wait
@@ -196,5 +197,6 @@ Write-Host "Staging folder : $stagingFolder"
 Write-Host "Release folder : $releaseFolder"
 
 Write-Host ""
+
 
 
