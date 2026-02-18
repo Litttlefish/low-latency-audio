@@ -48,7 +48,7 @@ jobs:
     - name: Place ASIO common folder
       working-directory: ${{env.GITHUB_WORKSPACE}}
       shell: cmd
-      run: xcopy ./asio_sdk_temp/common/* ./src/uac2-asio/asio/ /i
+      run: xcopy ./asio_sdk_temp/common/* ./src/uac2-asio/asio/
 
     - name: Setup DDK
       working-directory: ${{env.GITHUB_WORKSPACE}}
