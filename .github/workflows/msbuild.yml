@@ -53,8 +53,14 @@ jobs:
       run: Copy-Item -Path "./asio_sdk_temp/common" -Destination "./src/uac2-asio/asio" -Recurse -Force
         
     - uses: humbletim/vsdevenv-shell@v2
-
-    - uses: NuGet/setup-nuget@v2.0.0
+    
+    - name: Install WDK
+      shell: powershell
+      run: |
+        $wdkUrl = "https://go.microsoft.com/fwlink/?linkid=2128854" # 示例：Windows 11 WDK
+        $exePath = "$env:TEMP\wdksetup.exe"
+        Invoke-WebRequest -Uri $wdkUrl -OutFile $exePath
+        Start-Process -FilePath $exePath -ArgumentList "/quiet", "/norestart" -Wait
 
     - name: Build
       working-directory: ${{env.GITHUB_WORKSPACE}}
