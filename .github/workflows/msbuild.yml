@@ -58,7 +58,7 @@ jobs:
         Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/microsoft/Windows-driver-samples/main/configuration.dsc.yaml' -OutFile configuration.dsc.yaml
 
         # Install VS, SDK, WDK and WDK VS extension using the configuration file
-        winget configure -f configuration.dsc.yaml
+        winget configure -f configuration.dsc.yaml --accept-configuration-agreements
         
     - uses: humbletim/vsdevenv-shell@v2
 
