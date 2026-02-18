@@ -50,7 +50,7 @@ jobs:
       shell: cmd
       continue-on-error: true
       run: |
-        robocopy "./asio_sdk_temp/common" "./src/uac2-asio/asio"
+        robocopy "asio_sdk_temp/common" "src/uac2-asio/asio"
         if %ERRORLEVEL% GEQ 8 (
           echo Robocopy encountered a fatal error (code %ERRORLEVEL%).
           exit %ERRORLEVEL%
@@ -76,5 +76,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: compiles-${{matrix.configuration}}
-        path: .\build\release\*
+        path: build/*/*/*/*/*/*.*
         retention-days: 3
