@@ -35,7 +35,7 @@ Write-Host ""
 
 if ($env:GITHUB_ACTIONS -eq 'true') {
     Write-Host "CI Environment detected. Ensuring WDK is installed..." -ForegroundColor Cyan
-    $wdkExtensionPath = "C:\Program Files (x86)\Windows Kits\10\Vsix\VS2022"
+    $wdkExtensionPath = $env:WindowsSdkDir\Vsix
     if (-not (Test-Path $wdkExtensionPath)) {
         winget install --source winget --exact --id Microsoft.WindowsSDK.10.0.26100
         winget install --source winget --exact --id Microsoft.WindowsWDK.10.0.26100
@@ -196,3 +196,4 @@ Write-Host "Staging folder : $stagingFolder"
 Write-Host "Release folder : $releaseFolder"
 
 Write-Host ""
+
