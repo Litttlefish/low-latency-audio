@@ -49,6 +49,16 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       shell: powershell
       run: Copy-Item -Path "./asio_sdk_temp/common" -Destination "./src/uac2-asio/asio" -Recurse -Force
+
+    - name: Place ASIO common folder
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      shell: powershell
+      run: |
+        # Download configuration file to install WDK with VS 2022 Community
+        Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/microsoft/Windows-driver-samples/main/configuration.dsc.yaml' -OutFile configuration.dsc.yaml
+
+        # Install VS, SDK, WDK and WDK VS extension using the configuration file
+        winget configure -f configuration.dsc.yaml
         
     - uses: humbletim/vsdevenv-shell@v2
 
