@@ -5,11 +5,11 @@ if ($env:GITHUB_ACTIONS -eq 'true') {
     Write-Host "CI Environment detected. Ensuring WDK is installed..." -ForegroundColor Cyan
     $wdkExtensionPath = Join-Path $env:WindowsSdkDir "Vsix"
     Write-Host "Search Root: $wdkExtensionPath"
+    if (-not (Test-Path $wdkExtensionPath)) {
+        winget install --source winget --exact --id Microsoft.WindowsSDK.10.0.26100
+        winget install --source winget --exact --id Microsoft.WindowsWDK.10.0.26100
+    }
     Write-Host "Existance: $(Test-Path $wdkExtensionPath)"
-    # if (-not (Test-Path $wdkExtensionPath)) {
-    #     winget install --source winget --exact --id Microsoft.WindowsSDK.10.0.26100
-    #     winget install --source winget --exact --id Microsoft.WindowsWDK.10.0.26100
-    # }
     $vsix = Get-ChildItem -Path $wdkExtensionPath .\WDK.vsix -Recurse | Select-Object -First 1
     Write-Host "Locating WDK VSIX Extension..." -ForegroundColor Cyan
     if ($null -ne $vsix) {
@@ -168,6 +168,7 @@ foreach($configuration in $configurations)
     }
 
 }
+
 
 
 
