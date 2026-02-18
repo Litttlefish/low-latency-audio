@@ -53,22 +53,6 @@ jobs:
       run: Copy-Item -Path "./asio_sdk_temp/common" -Destination "./src/uac2-asio/asio" -Recurse -Force
         
     - uses: humbletim/vsdevenv-shell@v2
-    
-    - name: Install WDK
-      shell: powershell
-      run: |
-        $wdkUrl = "https://go.microsoft.com/fwlink/?linkid=2128854" # 示例：Windows 11 WDK
-        $exePath = "$env:TEMP\wdksetup.exe"
-        Invoke-WebRequest -Uri $wdkUrl -OutFile $exePath
-        Start-Process -FilePath $exePath -ArgumentList "/quiet", "/norestart" -Wait
-
-    - name: Install WDK Extension
-      run: |
-        # 寻找 WDK 安装目录下的 VSIX 文件
-        $vsixPath = "C:\Program Files (x86)\Windows Kits\10\Vsix\VS2022\WDK.vsix"
-        if (Test-Path $vsixPath) {
-            Start-Process "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\VSIXInstaller.exe" -ArgumentList "/q", "/admin", $vsixPath -Wait
-        }
 
     - name: Build
       working-directory: ${{env.GITHUB_WORKSPACE}}
