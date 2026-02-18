@@ -1,24 +1,6 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-if ($env:GITHUB_ACTIONS -eq 'true') {
-    Write-Host "CI Environment detected. Ensuring WDK is installed..." -ForegroundColor Cyan
-    $wdkExtensionPath = Join-Path $env:WindowsSdkDir "Vsix"
-    Write-Host "Search Root: $wdkExtensionPath"
-    if (-not (Test-Path $wdkExtensionPath)) {
-        winget install --source winget --exact --id Microsoft.WindowsSDK.10.0.26100
-        winget install --source winget --exact --id Microsoft.WindowsWDK.10.0.26100
-    }
-    Write-Host "Existance: $(Test-Path $wdkExtensionPath)"
-    $vsix = Get-ChildItem -Path $env:WindowsSdkDir .\WDK.vsix -Recurse | Select-Object -First 1
-    Write-Host "Locating WDK VSIX Extension..." -ForegroundColor Cyan
-    if ($null -ne $vsix) {
-        Write-Host "Existance: $($vsix.FullName)"
-        Write-Host "Installing WDK VSIX Extension..." -ForegroundColor Cyan
-        Start-Process -FilePath "C:\Program Files (x86)\Microsoft Visual Studio\Installer\VSIXInstaller.exe" -ArgumentList "/q", "/admin", "`"$($vsix.FullName)`"" -Wait -PassThru
-    }
-}
-
 $repoRoot = ".\"
 $sourceRoot = $repoRoot + "src\"
 $vsfilesFolder = $sourceRoot + "vsfiles\"
@@ -169,6 +151,7 @@ foreach($configuration in $configurations)
     }
 
 }
+
 
 
 
