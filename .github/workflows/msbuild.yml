@@ -48,7 +48,7 @@ jobs:
     - name: Place ASIO common folder
       working-directory: ${{env.GITHUB_WORKSPACE}}
       shell: cmd
-      run: robocopy "./asio_sdk_temp/common" "./src/uac2-asio/asio"
+      run: robocopy "./asio_sdk_temp/common" "./src/uac2-asio/asio" || (if %ERRORLEVEL% GEQ 8 exit /b %ERRORLEVEL%)
 
     - name: Setup DDK
       working-directory: ${{env.GITHUB_WORKSPACE}}
