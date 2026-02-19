@@ -56,6 +56,7 @@ USBAudio2-ACX.sys  = 1,,
 %USBAudio2-ACX.DeviceDesc%=USBAudio2-ACX_Device, USB\VID_1235&PID_821D&MI_00  ; Focusrite Scarlett 18i20 4th Gen
 %USBAudio2-ACX.DeviceDesc%=USBAudio2-ACX_Device, USB\VID_17C8&PID_7010&MI_00  ; Bitwig Connect
 
+%USBAudio2-ACX.DeviceDesc%=USBAudio2-ACX_Device, USB\VID_3302&PID_338F&MI_00  ; FRANSUN CX31993 HiFi-Audio
 
 [USBAudio2-ACX_Device.NT]
 CopyFiles=File_Copy
