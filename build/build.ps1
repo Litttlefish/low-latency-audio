@@ -37,7 +37,8 @@ foreach($configuration in $configurations)
 
     msbuild.exe -t:restore $acxSolution -p:RestorePackagesConfig=true
 
-    foreach($acxPlatform in ("x64", "Arm64"))
+    # foreach($acxPlatform in ("x64", "Arm64"))
+    foreach($acxPlatform in ("x64"))
     {
         Write-Host "Building ACX Driver: $configuration|$acxPlatform"
         msbuild.exe -p:Platform=$acxPlatform -p:Configuration=$configuration -verbosity:normal -target:Rebuild $acxSolution
@@ -151,6 +152,7 @@ foreach($configuration in $configurations)
     }
 
 }
+
 
 
 
