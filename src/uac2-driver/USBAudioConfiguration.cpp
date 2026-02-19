@@ -1130,7 +1130,7 @@ NTSTATUS USBAudio1ControlInterface::SetFeatureUnit(const NS_USBAudio::PCS_GENERI
 
 _Use_decl_annotations_
 PAGED_CODE_SEG
-NTSTATUS USBAudio1ControlInterface::SetProcesingUnit(const NS_USBAudio::PCS_GENERIC_AUDIO_DESCRIPTOR /* descriptor */)
+NTSTATUS USBAudio1ControlInterface::SetProcessingUnit(const NS_USBAudio::PCS_GENERIC_AUDIO_DESCRIPTOR /* descriptor */)
 {
     PAGED_CODE();
 
@@ -1713,7 +1713,6 @@ UCHAR USBAudio1StreamInterface::GetIntervalForDirection(
 {
     PAGED_CODE();
 
-    TraceEvents(TRACE_LEVEL_ERROR, TRACE_DESCRIPTOR, "alsdkfjalskdjf");
     return 0; // TBD
 }
 
@@ -2024,7 +2023,7 @@ NTSTATUS USBAudio2ControlInterface::SetFeatureUnit(const NS_USBAudio::PCS_GENERI
 
 _Use_decl_annotations_
 PAGED_CODE_SEG
-NTSTATUS USBAudio2ControlInterface::SetProcesingUnit(const NS_USBAudio::PCS_GENERIC_AUDIO_DESCRIPTOR descriptor)
+NTSTATUS USBAudio2ControlInterface::SetProcessingUnit(const NS_USBAudio::PCS_GENERIC_AUDIO_DESCRIPTOR descriptor)
 {
     NTSTATUS status = STATUS_SUCCESS;
 
@@ -3286,7 +3285,7 @@ NTSTATUS USBAudio2ControlInterface::SearchOutputTerminal(
     PAGED_CODE();
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC!  recursionCount = %d", recursionCount);
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DESCRIPTOR, " - souceID id %02x", sourceID);
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DESCRIPTOR, " - sourceID id %02x", sourceID);
 
     recursionCount--;
 
@@ -3536,7 +3535,7 @@ NTSTATUS USBAudio2ControlInterface::SearchInputTerminalFromOutputTerminal(
         ULONG numOfGenericAudioDescriptorInfo = m_genericAudioDescriptorInfo.GetNumOfArray();
         UCHAR sourceIDBackup = sourceID;
 
-        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DESCRIPTOR, " - souceID id %02x", sourceID);
+        TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_DESCRIPTOR, " - sourceID id %02x", sourceID);
         for (ULONG index = 0; index < numOfGenericAudioDescriptorInfo; index++)
         {
             NS_USBAudio::PCS_GENERIC_AUDIO_DESCRIPTOR genericAudioDescriptor = nullptr;
@@ -4140,7 +4139,7 @@ NTSTATUS USBAudio2StreamInterface::SetFormatType(
         //
         if (m_csAsInterfaceDescriptor != nullptr)
         {
-            ULONG formats = USBAudioDataFormat::ConverBmFormats(m_csAsInterfaceDescriptor->bmFormats);
+            ULONG formats = USBAudioDataFormat::ConvertBmFormats(m_csAsInterfaceDescriptor->bmFormats);
             for (ULONG mask = 1, count = 0; mask != 0; mask <<= 1)
             {
                 ULONG format = formats & mask;
@@ -4182,7 +4181,7 @@ NTSTATUS USBAudio2StreamInterface::SetFormatType(
         //
         if (m_csAsInterfaceDescriptor != nullptr)
         {
-            ULONG formats = USBAudioDataFormat::ConverBmFormats(m_csAsInterfaceDescriptor->bmFormats);
+            ULONG formats = USBAudioDataFormat::ConvertBmFormats(m_csAsInterfaceDescriptor->bmFormats);
             for (ULONG mask = 1, count = 0; mask != 0; mask <<= 1)
             {
                 ULONG format = formats & mask;
@@ -4775,7 +4774,7 @@ NTSTATUS USBAudio2StreamInterface::UpdateCurrentAudioDataFormat(
 
     if (m_csAsInterfaceDescriptor != nullptr)
     {
-        m_audioDataFormat = USBAudioDataFormat::ConverBmFormats(m_csAsInterfaceDescriptor->bmFormats);
+        m_audioDataFormat = USBAudioDataFormat::ConvertBmFormats(m_csAsInterfaceDescriptor->bmFormats);
     }
     else
     {
@@ -4833,7 +4832,7 @@ NTSTATUS USBAudio2StreamInterface::RegisterUSBAudioDataFormatManager(
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Entry");
     if ((m_csAsInterfaceDescriptor != nullptr) && (m_usbAudioEndpoints != nullptr) && (m_usbAudioDataFormat == nullptr))
     {
-        ULONG formats = USBAudioDataFormat::ConverBmFormats(m_csAsInterfaceDescriptor->bmFormats);
+        ULONG formats = USBAudioDataFormat::ConvertBmFormats(m_csAsInterfaceDescriptor->bmFormats);
 
         if ((m_formatITypeDescriptor != nullptr) || (m_formatIIITypeDescriptor != nullptr))
         {
@@ -7491,7 +7490,7 @@ NTSTATUS USBAudioConfiguration::OnInterruptDataMessageReceived(
 )
 {
     NTSTATUS status = STATUS_SUCCESS;
-    UCHAR    controlSelector = value >> NS_USBAudio0200::INTERRUPT_VALUE_CONTRO_SELECTOR_SHIFT;
+    UCHAR    controlSelector = value >> NS_USBAudio0200::INTERRUPT_VALUE_CONTROL_SELECTOR_SHIFT;
     UCHAR    controlNumber = value & NS_USBAudio0200::INTERRUPT_VALUE_CONTROL_NUMBER_MASK;
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_INTERRUPTTRANSFER, "%!FUNC! Entry");

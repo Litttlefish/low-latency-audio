@@ -124,13 +124,13 @@ void MixingEngineThread::ThreadMain()
 
     PEX_TIMER exTimer = ExAllocateTimer(nullptr, nullptr, EX_TIMER_HIGH_RESOLUTION);
     m_waitEvents[toInt(MixingEngineWaitEventsNumber::TimerEvent)] = exTimer;
-    m_waitEnvetsCount = toInt(MixingEngineWaitEventsNumber::NumOfWaitEventsWithoutOutputReady);
+    m_waitEventsCount = toInt(MixingEngineWaitEventsNumber::NumOfWaitEventsWithoutOutputReady);
 
 #if 0
 	if ((deviceExtension->AsioBufferObject != nullptr) && (deviceExtension->AsioBufferObject->OutputReadyEvent != nullptr))
 	{
 		m_waitEvents[toInt(MixingEngineWaitEventsNumber::OutputReadyEvent)] = deviceExtension->AsioBufferObject->OutputReadyEvent;
-		m_waitEnvetsCount = toInt(MixingEngineWaitEventsNumber::NumOfWaitEvents);
+		m_waitEventsCount = toInt(MixingEngineWaitEventsNumber::NumOfWaitEvents);
 	}
 #endif
     KeSetEvent(&m_threadReadyEvent, EVENT_INCREMENT, FALSE);
@@ -188,7 +188,7 @@ NTSTATUS MixingEngineThread::Wait()
 
     NTSTATUS wakeUpReason = STATUS_SUCCESS;
     wakeUpReason = KeWaitForMultipleObjects(
-        m_waitEnvetsCount,
+        m_waitEventsCount,
         m_waitEvents,
         WaitAny,
         Executive,

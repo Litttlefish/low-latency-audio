@@ -421,7 +421,7 @@ class USBAudioControlInterface : public USBAudioInterface
         _In_ const NS_USBAudio::PCS_GENERIC_AUDIO_DESCRIPTOR descriptor
     ) = 0;
 
-    virtual NTSTATUS SetProcesingUnit(
+    virtual NTSTATUS SetProcessingUnit(
         _In_ const NS_USBAudio::PCS_GENERIC_AUDIO_DESCRIPTOR descriptor
     ) = 0;
 
@@ -737,7 +737,7 @@ class USBAudio1ControlInterface : public USBAudioControlInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    virtual NTSTATUS SetProcesingUnit(
+    virtual NTSTATUS SetProcessingUnit(
         _In_ const NS_USBAudio::PCS_GENERIC_AUDIO_DESCRIPTOR descriptor
     );
 
@@ -1153,7 +1153,7 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    virtual NTSTATUS SetProcesingUnit(
+    virtual NTSTATUS SetProcessingUnit(
         _In_ const NS_USBAudio::PCS_GENERIC_AUDIO_DESCRIPTOR descriptor
     );
 
@@ -1382,7 +1382,7 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
     NTSTATUS QuerySampleFrequencyControls(
-        _In_ UCHAR    clockSouceID,
+        _In_ UCHAR    clockSourceID,
         _Out_ UCHAR & controls
     );
 

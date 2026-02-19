@@ -233,7 +233,7 @@ AsioBufferObject::SetBuffer(
     RETURN_NTSTATUS_IF_TRUE_ACTION(m_recHeader == nullptr, status = STATUS_INSUFFICIENT_RESOURCES, status);
     RETURN_NTSTATUS_IF_TRUE_ACTION(m_recHeader->HeaderLength != sizeof(UAC_ASIO_REC_BUFFER_HEADER), status = STATUS_INVALID_BUFFER_SIZE, status);
 
-    ULONG bytesPerSample = USBAudioDataFormat::ConverSampleTypeToBytesPerSample(m_deviceContext->AudioProperty.SampleType);
+    ULONG bytesPerSample = USBAudioDataFormat::ConvertSampleTypeToBytesPerSample(m_deviceContext->AudioProperty.SampleType);
     ULONG bufferSizeBytes = m_playHeader->PeriodSamples;
 
     bufferSizeBytes *= bytesPerSample;
@@ -494,7 +494,7 @@ AsioBufferObject::CopyFromAsioToOutputData(
     ULONG asioReadStartIndex = (ULONG)((asioPosition + m_deviceContext->Params.PreSendFrames) % (m_bufferLength));
     ULONG asioReadEndIndex = (ULONG)((asioPosition + samples + m_deviceContext->Params.PreSendFrames) % (m_bufferLength));
 
-    ULONG asioSampleSize = USBAudioDataFormat::ConverSampleTypeToBytesPerSample(m_deviceContext->AudioProperty.SampleType);
+    ULONG asioSampleSize = USBAudioDataFormat::ConvertSampleTypeToBytesPerSample(m_deviceContext->AudioProperty.SampleType);
     ULONG asioByteOffset = asioSampleSize - usbBytesPerSample;
 
     //
@@ -656,7 +656,7 @@ AsioBufferObject::CopyToAsioFromInputData(
     const ULONG asioWriteStartIndex = (ULONG)((asioPosition) % (m_bufferLength));
     const ULONG asioWriteEndIndex = (ULONG)((asioPosition + samples) % (m_bufferLength));
 
-    ULONG asioSampleSize = USBAudioDataFormat::ConverSampleTypeToBytesPerSample(m_deviceContext->AudioProperty.SampleType);
+    ULONG asioSampleSize = USBAudioDataFormat::ConvertSampleTypeToBytesPerSample(m_deviceContext->AudioProperty.SampleType);
     ULONG asioByteOffset = asioSampleSize - usbBytesPerSample;
 
     switch (m_deviceContext->AudioProperty.CurrentSampleFormat)

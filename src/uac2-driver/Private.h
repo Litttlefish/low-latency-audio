@@ -472,14 +472,14 @@ CodecR_CreateRenderCircuit(
 PAGED_CODE_SEG
 NTSTATUS
 CodecR_VolumeChangeLevelNotification(
-    _In_ ACXCIRCUIT Cirtuit,
+    _In_ ACXCIRCUIT Circuit,
     _In_ UCHAR      EntityID
 );
 
 PAGED_CODE_SEG
 NTSTATUS
 CodecR_MuteChangeStateNotification(
-    _In_ ACXCIRCUIT Cirtuit,
+    _In_ ACXCIRCUIT Circuit,
     _In_ UCHAR      EntityID
 );
 
@@ -577,14 +577,14 @@ CodecC_CreateCaptureCircuit(
 PAGED_CODE_SEG
 NTSTATUS
 CodecC_VolumeChangeLevelNotification(
-    _In_ ACXCIRCUIT Cirtuit,
+    _In_ ACXCIRCUIT Circuit,
     _In_ UCHAR      EntityID
 );
 
 PAGED_CODE_SEG
 NTSTATUS
 CodecC_MuteChangeStateNotification(
-    _In_ ACXCIRCUIT Cirtuit,
+    _In_ ACXCIRCUIT Circuit,
     _In_ UCHAR      EntityID
 );
 

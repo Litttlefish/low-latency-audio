@@ -1163,7 +1163,7 @@ NTSTATUS ControlRequestSetVolume(
         volume
     );
 
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!, voulme %u (0x%x)", status, volume, volume);
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!, volume %u (0x%x)", status, volume, volume);
     return status;
 }
 

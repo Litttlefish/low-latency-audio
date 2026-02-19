@@ -462,7 +462,7 @@ CodecR_EvtVolumeRetrieveLevel(
         *VolumeLevel = volumeContext->VolumeLevel[0];
     }
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_CIRCUIT, "%!FUNC! Exit, channel %u, voluem level %ld", Channel, *VolumeLevel);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_CIRCUIT, "%!FUNC! Exit, channel %u, volume level %ld", Channel, *VolumeLevel);
 
     return STATUS_SUCCESS;
 }

@@ -411,7 +411,7 @@ __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
 static NTSTATUS NotifyDataFormatChange(
     _In_ WDFDEVICE     device,
-    _In_ ACXCIRCUIT    cirtuit,
+    _In_ ACXCIRCUIT    circuit,
     _In_ ACXPIN        pin,
     _In_ ACXDATAFORMAT originalDataFormat
 );
@@ -1027,18 +1027,18 @@ Return Value:
     }
     ReportInternalParameters(deviceContext);
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "renderDeviceName = %wZ, DeviceName = %ws", &renderCircuitName, deviceContext->DeviceName);
-    RETURN_NTSTATUS_IF_FAILED(CodecR_AddStaticRender(device, &CODEC_RENDER_COMPONENT_GUID, &renderCircuitName));
-
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "captureDeviceName = %wZ, DeviceName = %ws", &captureCircuitName, deviceContext->DeviceName);
-    RETURN_NTSTATUS_IF_FAILED(CodecC_AddStaticCapture(device, &CODEC_CAPTURE_COMPONENT_GUID, &MIC_CUSTOM_NAME, &captureCircuitName));
-
     //
     // To prevent the DMA buffer from becoming a double buffer on a PC
     // with 4GB or more of memory, contiguous memory is allocated in
     // an area less than 4GB.
     //
     RETURN_NTSTATUS_IF_FAILED(deviceContext->ContiguousMemory->Allocate(deviceContext->UsbAudioConfiguration, deviceContext->SupportedControl.MaxBurstOverride, UAC_MAX_CLASSIC_FRAMES_PER_IRP, deviceContext->FramesPerMs));
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "renderDeviceName = %wZ, DeviceName = %ws", &renderCircuitName, deviceContext->DeviceName);
+    RETURN_NTSTATUS_IF_FAILED(CodecR_AddStaticRender(device, &CODEC_RENDER_COMPONENT_GUID, &renderCircuitName));
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "captureDeviceName = %wZ, DeviceName = %ws", &captureCircuitName, deviceContext->DeviceName);
+    RETURN_NTSTATUS_IF_FAILED(CodecC_AddStaticCapture(device, &CODEC_CAPTURE_COMPONENT_GUID, &MIC_CUSTOM_NAME, &captureCircuitName));
 
     //
     // The driver uses this DDI to associate a circuit to a device. After
@@ -1116,7 +1116,7 @@ Return Value:
         SaveSampleRateToRegistry(deviceContext->Device, deviceContext->AudioProperty.SampleRate);
     }
 
-	USBAudioAcxDriverStopInterruptDataReception(deviceContext);
+    USBAudioAcxDriverStopInterruptDataReception(deviceContext);
 
     if (deviceContext->ContiguousMemory != nullptr)
     {
@@ -1159,13 +1159,13 @@ Return Value:
     //
     if (deviceContext->Render != nullptr)
     {
-        RETURN_NTSTATUS_IF_FAILED(AcxDeviceRemoveCircuit(device, deviceContext->Render));
+        AcxDeviceRemoveCircuit(device, deviceContext->Render);
         deviceContext->Render = nullptr;
     }
 
     if (deviceContext->Capture != nullptr)
     {
-        RETURN_NTSTATUS_IF_FAILED(AcxDeviceRemoveCircuit(device, deviceContext->Capture));
+        AcxDeviceRemoveCircuit(device, deviceContext->Capture);
         deviceContext->Capture = nullptr;
     }
 

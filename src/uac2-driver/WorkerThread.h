@@ -112,7 +112,7 @@ class WorkerThread
         (PVOID)&m_threadKillEvent,
         (PVOID)&m_threadWakeUpEvent,
     };
-    ULONG m_waitEnvetsCount{toInt(WaitEventsNumber::NumOfWaitEvents)};
+    ULONG m_waitEventsCount{toInt(WaitEventsNumber::NumOfWaitEvents)};
 };
 
 #endif

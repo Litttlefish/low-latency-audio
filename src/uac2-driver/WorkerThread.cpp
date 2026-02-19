@@ -196,7 +196,7 @@ NTSTATUS WorkerThread::Wait()
 
     NTSTATUS wakeUpReason = STATUS_SUCCESS;
     wakeUpReason = KeWaitForMultipleObjects(
-        m_waitEnvetsCount,
+        m_waitEventsCount,
         m_waitEvents,
         WaitAny,
         Executive,

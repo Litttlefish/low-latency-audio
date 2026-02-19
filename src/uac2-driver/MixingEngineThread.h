@@ -99,7 +99,7 @@ class MixingEngineThread : public WorkerThread
         nullptr,
         nullptr
     };
-    ULONG m_waitEnvetsCount{0};
+    ULONG m_waitEventsCount{0};
 };
 
 #endif
