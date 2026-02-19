@@ -53,10 +53,10 @@ jobs:
         robocopy "asio_sdk_temp/common" "src/uac2-asio/asio"
         if %ERRORLEVEL% GEQ 8 (
           echo Robocopy encountered a fatal error (code %ERRORLEVEL%).
-          exit %ERRORLEVEL%
+          exit /b %ERRORLEVEL%
         ) else (
           echo Robocopy completed successfully with warnings (code %ERRORLEVEL%).
-          exit 0
+          exit /b 0
         )
 
     - name: Setup DDK
