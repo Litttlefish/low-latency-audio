@@ -67,7 +67,8 @@ foreach($configuration in $configurations)
 
     msbuild.exe -t:restore $asioSolution -p:RestorePackagesConfig=true
 
-    foreach($asioPlatform in ("x64", "Arm64EC"))
+    # foreach($asioPlatform in ("x64", "Arm64EC"))
+    foreach($asioPlatform in ("x64"))
     {
         Write-Host "Building ASIO Driver: $configuration|$asioPlatform"
         msbuild.exe -p:Platform=$asioPlatform -p:Configuration=$configuration -verbosity:normal -target:Rebuild $asioSolution 
@@ -108,7 +109,8 @@ foreach($configuration in $configurations)
 
     msbuild.exe -t:restore $controlPanelSolution -p:RestorePackagesConfig=true
 
-    foreach($controlPanelPlatform in ("x64", "Arm64"))
+    # foreach($controlPanelPlatform in ("x64", "Arm64"))
+    foreach($controlPanelPlatform in ("x64"))
     {
         Write-Host "Building Control Panel:  $configuration|$controlPanelPlatform"
         msbuild.exe -p:Platform=$controlPanelPlatform -p:Configuration=$configuration -verbosity:normal -target:Rebuild $controlPanelSolution
@@ -135,7 +137,8 @@ foreach($configuration in $configurations)
     # build installers
     Write-Host "Building installers..."
 
-    foreach($installerPlatform in ("x64", "Arm64"))
+    # foreach($installerPlatform in ("x64", "Arm64"))
+    foreach($installerPlatform in ("x64"))
     {
         msbuild.exe -p:Platform=$installerPlatform -p:Configuration=$configuration -verbosity:normal -target:Rebuild $installerProject 
 
@@ -152,6 +155,7 @@ foreach($configuration in $configurations)
     }
 
 }
+
 
 
 
