@@ -542,6 +542,12 @@ class USBAudioControlInterface : public USBAudioInterface
         _Out_ bool &         mute
     ) = 0;
 
+    virtual NTSTATUS GetCurrentConnectorState(
+        _In_    PDEVICE_CONTEXT     deviceContext,
+        _In_    UCHAR               entityID,
+        _Out_   NS_USBAudio::AUDIO_CHANNEL_CLUSTER_DESCRIPTOR & connectorState
+    ) = 0;
+
     virtual NTSTATUS SetCurrentSampleFrequency(
         _In_ PDEVICE_CONTEXT deviceContext,
         _In_ ULONG           desiredSampleRate
@@ -560,6 +566,8 @@ class USBAudioControlInterface : public USBAudioInterface
         _In_ PDEVICE_CONTEXT deviceContext,
         _In_ ULONG &         supportedSampleRate
     ) = 0;
+
+   virtual bool HasInterruptDataMessageEndpoint() = 0;
 
     virtual void GetInterruptDataMessageEndpoint(
         _Out_ bool &  isValid,
@@ -919,6 +927,14 @@ class USBAudio1ControlInterface : public USBAudioControlInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
+    virtual NTSTATUS GetCurrentConnectorState(
+        _In_    PDEVICE_CONTEXT     deviceContext,
+        _In_    UCHAR               entityID,
+        _Out_   NS_USBAudio::AUDIO_CHANNEL_CLUSTER_DESCRIPTOR & connectorState
+    );
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
     virtual NTSTATUS SetCurrentSampleFrequency(
         _In_ PDEVICE_CONTEXT deviceContext,
         _In_ ULONG           desiredSampleRate
@@ -943,6 +959,10 @@ class USBAudio1ControlInterface : public USBAudioControlInterface
         _In_ PDEVICE_CONTEXT deviceContext,
         _In_ ULONG &         supportedSampleRate
     );
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    bool HasInterruptDataMessageEndpoint();
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
@@ -1337,6 +1357,14 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
+    virtual NTSTATUS GetCurrentConnectorState(
+        _In_    PDEVICE_CONTEXT     deviceContext,
+        _In_    UCHAR               entityID,
+        _Out_   NS_USBAudio::AUDIO_CHANNEL_CLUSTER_DESCRIPTOR & connectorState
+    );
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
     virtual NTSTATUS SetCurrentSampleFrequency(
         _In_ PDEVICE_CONTEXT deviceContext,
         _In_ ULONG           desiredSampleRate
@@ -1361,6 +1389,10 @@ class USBAudio2ControlInterface : public USBAudioControlInterface
         _In_ PDEVICE_CONTEXT deviceContext,
         _In_ ULONG &         supportedSampleRate
     );
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    bool HasInterruptDataMessageEndpoint();
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
@@ -2011,6 +2043,14 @@ class USBAudioInterfaceInfo
         _Out_ bool &         mute
     );
 
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
+    virtual NTSTATUS GetCurrentConnectorState(
+        _In_    PDEVICE_CONTEXT     deviceContext,
+        _In_    UCHAR               entityID,
+        _Out_   NS_USBAudio::AUDIO_CHANNEL_CLUSTER_DESCRIPTOR & connectorState
+    );
+
   protected:
     WDFOBJECT                                                                m_parentObject{nullptr};
     VariableArray<USBAudioInterface *, DEFAULT_SIZE_OF_ALTERNATE_INTERFACES> m_usbAudioAlternateInterfaces;
@@ -2151,6 +2191,14 @@ class USBAudioConfiguration
 
     __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
+    NTSTATUS GetCurrentConnectorState(
+        _In_    PDEVICE_CONTEXT     deviceContext,
+        _In_    UCHAR               entityID,
+        _Out_   NS_USBAudio::AUDIO_CHANNEL_CLUSTER_DESCRIPTOR & connectorState
+    );
+
+    __drv_maxIRQL(PASSIVE_LEVEL)
+    PAGED_CODE_SEG
     bool
     IsDeviceSplittable(
         _In_ bool isInput
@@ -2281,6 +2329,10 @@ class USBAudioConfiguration
     __drv_maxIRQL(DISPATCH_LEVEL)
     NONPAGED_CODE_SEG
     bool HasInputAndOutputIsochronousInterfaces() const;
+
+    __drv_maxIRQL(DISPATCH_LEVEL)
+    NONPAGED_CODE_SEG
+    bool HasInterruptDataMessageInterfaces() const;
 
     __drv_maxIRQL(DISPATCH_LEVEL)
     NONPAGED_CODE_SEG
@@ -2491,6 +2543,7 @@ class USBAudioConfiguration
     bool                          m_isUSBAudio2{false};
     bool                          m_isInputIsochronousInterfaceExists{false};
     bool                          m_isOutputIsochronousInterfaceExists{false};
+    bool                          m_isInterruptDataMessageInterfaceExists{false};
     ULONG                         m_clockEntityCountForTerminal{0};
     USBAudioDataFormatManager     m_inputUsbAudioDataFormatManager;
     USBAudioDataFormatManager     m_outputUsbAudioDataFormatManager;

@@ -245,8 +245,11 @@ void InterruptMessageWorkerThreadFunction(
         {
             if (deviceContext->UsbAudioConfiguration->GetUpdatedInputConnectorEntity(entityID))
             {
-                // TBD
                 TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_INTERRUPTTRANSFER, "UpdateInputConnectorEntity(0x%02x)", entityID);
+                if (deviceContext->Capture != nullptr)
+                {
+                    CodecC_ConnectorChangeStateNotification(deviceContext->Capture, entityID);
+                }
             }
         }
 
@@ -254,8 +257,11 @@ void InterruptMessageWorkerThreadFunction(
         {
             if (deviceContext->UsbAudioConfiguration->GetUpdatedOutputConnectorEntity(entityID))
             {
-                // TBD
                 TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_INTERRUPTTRANSFER, "UpdateOutputConnectorEntity(0x%02x)", entityID);
+                if (deviceContext->Render != nullptr)
+                {
+                    CodecR_ConnectorChangeStateNotification(deviceContext->Render, entityID);
+                }
             }
         }
     }

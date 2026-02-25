@@ -1376,8 +1376,17 @@ Codec_SetPowerPolicy(
     //
     // Init the idle policy structure.
     //
+    WDF_POWER_POLICY_S0_IDLE_CAPABILITIES idolCapabilies;
+    if (deviceContext->UsbAudioConfiguration->HasInterruptDataMessageInterfaces())
+    {
+        idolCapabilies = IdleCanWakeFromS0;
+    }
+    else
+    {
+        idolCapabilies = IdleCannotWakeFromS0;
+    }
     WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS idleSettings;
-    WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS_INIT(&idleSettings, IdleCannotWakeFromS0);
+    WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS_INIT(&idleSettings, idolCapabilies);
     idleSettings.IdleTimeout = IDLE_POWER_TIMEOUT;
     idleSettings.IdleTimeoutType = SystemManagedIdleTimeoutWithHint;
     idleSettings.ExcludeD3Cold = deviceContext->ExcludeD3Cold;

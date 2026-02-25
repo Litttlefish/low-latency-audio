@@ -1057,6 +1057,7 @@ Return Value:
             //
 
             ACX_PIN_CONFIG_INIT(&pinCfg);
+            pinCfg.Id = index * CodecRenderPinCount + CodecRenderHostPin;
             pinCfg.Type = AcxPinTypeSink;
             pinCfg.Communication = AcxPinCommunicationSink;
             pinCfg.Category = &KSCATEGORY_AUDIO;
@@ -1135,9 +1136,13 @@ Return Value:
         // For more information on audio jack see: https://docs.microsoft.com/en-us/windows/win32/api/devicetopology/ns-devicetopology-ksjack_description
         //
         {
+            ACX_JACK_CALLBACKS   jackCallbacks;
             ACX_JACK_CONFIG jackCfg;
             ACXJACK         jack;
             PJACK_CONTEXT   jackContext;
+
+            ACX_JACK_CALLBACKS_INIT(&jackCallbacks);
+            jackCallbacks.EvtAcxJackRetrievePresenceState = EvtJackRetrievePresence;
 
             ACX_JACK_CONFIG_INIT(&jackCfg);
             jackCfg.Description.ChannelMapping = (numOfChannelsPerDevice == 1 ? SPEAKER_FRONT_CENTER : SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT);
@@ -1146,7 +1151,8 @@ Return Value:
             jackCfg.Description.GeoLocation = AcxGeoLocFront;
             jackCfg.Description.GenLocation = AcxGenLocPrimaryBox;
             jackCfg.Description.PortConnection = AcxPortConnIntegratedDevice;
-
+            jackCfg.Flags = AcxJackConfigJackDetection;
+            jackCfg.Callbacks = &jackCallbacks;
             WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, JACK_CONTEXT);
             attributes.ParentObject = pins[index * CodecRenderPinCount + CodecRenderBridgePin];
 
@@ -1156,7 +1162,10 @@ Return Value:
 
             jackContext = GetJackContext(jack);
             ASSERT(jackContext);
-            jackContext->Dummy = 0;
+            jackContext->IsConnected = true;
+
+            PCODEC_PIN_CONTEXT pinContext = GetCodecPinContext(pins[index * CodecCapturePinCount + CodecCaptureBridgePin]);
+            pinContext->jack = jack;
 
             RETURN_NTSTATUS_IF_FAILED(AcxPinAddJacks(pins[index * CodecRenderPinCount + CodecRenderBridgePin], &jack, 1));
         }
@@ -1586,6 +1595,69 @@ CodecR_MuteChangeStateNotification(
                 return STATUS_SUCCESS;
             }
         }
+    }
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_CIRCUIT, "%!FUNC! Exit %!STATUS!", status);
+
+    return status;
+}
+
+
+PAGED_CODE_SEG
+_Use_decl_annotations_
+NTSTATUS
+CodecR_ConnectorChangeStateNotification(
+    ACXCIRCUIT Circuit,
+    UCHAR      EntityID
+)
+{
+    NTSTATUS status = STATUS_SUCCESS;
+
+    PAGED_CODE();
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_CIRCUIT, "%!FUNC! Entry");
+
+    ULONG pinCount = AcxCircuitGetPinsCount(Circuit) / CodecRenderPinCount;
+
+    for (ULONG pinIndex = 0; pinIndex < pinCount; ++pinIndex)
+    {
+        ULONG pinID = pinIndex * CodecRenderPinCount + CodecRenderBridgePin;
+        ACXPIN pin = AcxCircuitGetPinById(Circuit, pinID);
+
+        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_CIRCUIT, "pinID %u, pin %p", pinID, pin);
+
+        if (pin == nullptr)
+        {
+            continue;
+        }
+
+        PCODEC_PIN_CONTEXT pinContext = GetCodecPinContext(pin);
+
+        PDEVICE_CONTEXT deviceContext = GetDeviceContext(pinContext->Device);
+
+        NS_USBAudio::AUDIO_CHANNEL_CLUSTER_DESCRIPTOR connectorState;
+
+        status = deviceContext->UsbAudioConfiguration->GetCurrentConnectorState(
+            deviceContext,
+            EntityID,
+            connectorState
+        );
+
+        BOOLEAN isConnected = false;
+        if (0 < connectorState.bmChannelConfig)
+        {
+            isConnected = true;
+        }
+
+        if (pinContext->jack == nullptr)
+        {
+            continue;
+        }
+
+        ACXJACK			jack = pinContext->jack;
+        PJACK_CONTEXT	jackContext = GetJackContext(jack);
+        jackContext->IsConnected = isConnected;
+        AcxJackChangeStateNotification(jack);
     }
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_CIRCUIT, "%!FUNC! Exit %!STATUS!", status);

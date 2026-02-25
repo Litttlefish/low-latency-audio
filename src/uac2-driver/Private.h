@@ -261,7 +261,7 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(FORMAT_CONTEXT, GetFormatContext)
 //
 typedef struct _JACK_CONTEXT
 {
-    ULONG Dummy;
+    BOOLEAN IsConnected;
 } JACK_CONTEXT, *PJACK_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(JACK_CONTEXT, GetJackContext)
@@ -341,6 +341,7 @@ typedef struct _CODEC_PIN_CONTEXT
     ULONG          DeviceIndex;
     ULONG          Channel;
     ULONG          NumOfChannelsPerDevice;
+    ACXJACK        jack;
 } CODEC_PIN_CONTEXT, *PCODEC_PIN_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(CODEC_PIN_CONTEXT, GetCodecPinContext)
@@ -483,6 +484,13 @@ CodecR_MuteChangeStateNotification(
     _In_ UCHAR      EntityID
 );
 
+PAGED_CODE_SEG
+NTSTATUS
+CodecR_ConnectorChangeStateNotification(
+    _In_ ACXCIRCUIT Circuit,
+    _In_ UCHAR      EntityID
+);
+
 /////////////////////////////////////////////////////////
 //
 // Codec Capture (microphone) definitions
@@ -584,6 +592,13 @@ CodecC_VolumeChangeLevelNotification(
 PAGED_CODE_SEG
 NTSTATUS
 CodecC_MuteChangeStateNotification(
+    _In_ ACXCIRCUIT Circuit,
+    _In_ UCHAR      EntityID
+);
+
+PAGED_CODE_SEG
+NTSTATUS
+CodecC_ConnectorChangeStateNotification(
     _In_ ACXCIRCUIT Circuit,
     _In_ UCHAR      EntityID
 );

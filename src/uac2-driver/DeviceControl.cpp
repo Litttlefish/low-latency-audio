@@ -1264,6 +1264,48 @@ NTSTATUS ControlRequestSetAutoGainControl(
     return status;
 }
 
+PAGED_CODE_SEG
+_Use_decl_annotations_
+NTSTATUS ControlRequestGetCurrentConnectorState(
+    PDEVICE_CONTEXT deviceContext,
+    UCHAR           interfaceNumber,
+    UCHAR           entityID,
+    NS_USBAudio::AUDIO_CHANNEL_CLUSTER_DESCRIPTOR& connectorState
+)
+{
+    PAGED_CODE();
+
+    NTSTATUS status = STATUS_SUCCESS;
+
+    RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_CTRLREQUEST, "%!FUNC! Entry");
+
+    auto setBufferScope = wil::scope_exit(
+        [&]() {
+            TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_CTRLREQUEST, "ControlRequestGetConnectorInsertionStatus Exit %!STATUS!", status);
+        }
+    );
+
+    RtlZeroMemory(&connectorState, sizeof(connectorState));
+
+    ULONG dataLength = 0;
+    status = ControlRequest(
+        deviceContext,
+        UsbMakeBmRequestType(BMREQUEST_DEVICE_TO_HOST, BMREQUEST_CLASS, BMREQUEST_TO_INTERFACE),
+        NS_USBAudio0200::CUR,
+        (((USHORT)NS_USBAudio0200::TE_CONNECTOR_CONTROL) << 8),
+        (((USHORT)entityID) << 8) | interfaceNumber,
+        &connectorState,
+        sizeof(connectorState),
+        &dataLength
+    );
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_CTRLREQUEST, "bNrChannels %02x, bmChannelConfig %08x, iChannelNames %02x", connectorState.bNrChannels, connectorState.bmChannelConfig, connectorState.iChannelNames);
+
+    return status;
+}
+
 #if 0
 // UAC 1.0 only
 PAGED_CODE_SEG

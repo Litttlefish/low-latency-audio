@@ -90,21 +90,17 @@ struct AFX_FIND_KSATTRIBUTE_BY_ID
 PAGED_CODE_SEG
 NTSTATUS
 EvtJackRetrievePresence(
-    _In_          ACXJACK /* Jack */,
+    _In_          ACXJACK Jack,
     _In_ PBOOLEAN IsConnected
 )
 {
     PAGED_CODE();
 
-    NTSTATUS status = STATUS_SUCCESS;
+    PJACK_CONTEXT jackContext = GetJackContext(Jack);
 
-    //
-    // Because this is a sample we always return true (jack is present). A real driver should check
-    // if the device is actually present before returning true.
-    //
-    *IsConnected = true;
+    *IsConnected = jackContext->IsConnected;
 
-    return status;
+    return STATUS_SUCCESS;
 }
 
 PAGED_CODE_SEG
@@ -157,7 +153,6 @@ CreateAudioJack(
 
     jackContext = GetJackContext(jack);
     ASSERT(jackContext);
-    jackContext->Dummy = 0;
 
     status = AcxPinAddJacks(BridgePin, &jack, 1);
 
