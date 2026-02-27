@@ -652,7 +652,7 @@ StreamObject::CalculateTransferSizeAndSetURB(
     }
     if (m_deviceContext->UsbAudioConfiguration->HasInputIsochronousInterface())
     {
-        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "initialized OUT URB. in sample %I64d, out sample %I64d, startFrame %d, %u bytes", inPosition / m_deviceContext->InputProperty.BytesPerBlock, readPosition / m_deviceContext->OutputProperty.BytesPerBlock, startFrame, transferSize);
+        // TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "initialized OUT URB. in sample %I64d, out sample %I64d, startFrame %d, %u bytes", inPosition / m_deviceContext->InputProperty.BytesPerBlock, readPosition / m_deviceContext->OutputProperty.BytesPerBlock, startFrame, transferSize);
     }
     else
     {
