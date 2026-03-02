@@ -1377,13 +1377,18 @@ Codec_SetPowerPolicy(
     // Init the idle policy structure.
     //
     WDF_POWER_POLICY_S0_IDLE_CAPABILITIES idolCapabilies;
-    if (deviceContext->UsbAudioConfiguration->HasInterruptDataMessageInterfaces())
+    if (deviceContext->UsbAudioConfiguration->HasInterruptDataMessageInterfaces() && deviceContext->InterruptMessageProperty.IsValid)
     {
+        //
+        // To support power saving, specify IdleCanWakeFromS0 only when interrupt data messages from the device are valid.
+        //
         idolCapabilies = IdleCanWakeFromS0;
+        TraceEvents(TRACE_LEVEL_VERBOSE, FLAG_POWER, " - IdleCanWakeFromS0");
     }
     else
     {
         idolCapabilies = IdleCannotWakeFromS0;
+        TraceEvents(TRACE_LEVEL_VERBOSE, FLAG_POWER, " - IdleCannotWakeFromS0");
     }
     WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS idleSettings;
     WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS_INIT(&idleSettings, idolCapabilies);
@@ -5160,8 +5165,6 @@ Return Value:
         ACXDATAFORMAT outputDataFormatBeforeChange = nullptr;
         ACXDATAFORMAT inputDataFormatAfterChange = nullptr;
         ACXDATAFORMAT outputDataFormatAfterChange = nullptr;
-        const ULONG   sampleFormatsTypeI = USBAudioDataFormat::GetSampleFormatsTypeI();
-        const ULONG   sampleFormatsTypeIII = USBAudioDataFormat::GetSampleFormatsTypeIII();
 
         WdfWaitLockAcquire(deviceContext->StreamWaitLock, nullptr);
 
@@ -5178,15 +5181,7 @@ Return Value:
         status = USBAudioDataFormat::ConvertFormatToSampleFormat(deviceContext->AudioProperty.CurrentSampleFormat, desiredFormatType, desiredFormat);
         IF_FAILED_JUMP(status, Exit_BeforeWaitLockRelease);
 
-        //
-        // If the device supports only USB Audio Data Format Type III,
-        // ASIO is treated as unsupported.
-        //
-        // If the device supports both USB Audio Data Format Type III and Type I,
-        // ASIO will operate by switching to USB Audio Data Format Type I.
-        //
-
-        if (((deviceContext->AudioProperty.SupportedSampleFormats & sampleFormatsTypeIII) != 0) && (deviceContext->AudioProperty.SupportedSampleFormats & sampleFormatsTypeI) == 0)
+        if (!deviceContext->UsbAudioConfiguration->IsEnableASIO())
         {
             status = STATUS_INVALID_DEVICE_REQUEST;
             IF_FAILED_JUMP(status, Exit_BeforeWaitLockRelease);

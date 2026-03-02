@@ -1126,6 +1126,8 @@ NTSTATUS ControlRequestGetVolume(
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
     RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, " - interface %u, entity id 0x%02x, channel 0x%02x", interfaceNumber, entityID, channel);
+
     NTSTATUS status = GetCurrentSetting(
         deviceContext,
         interfaceNumber,
@@ -1153,6 +1155,8 @@ NTSTATUS ControlRequestSetVolume(
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
     RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
+
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, " - interface %u, entity id 0x%02x, channel 0x%02x, volume 0x%04x", interfaceNumber, entityID, channel, volume);
 
     NTSTATUS status = SetCurrentSetting(
         deviceContext,
@@ -1182,6 +1186,8 @@ NTSTATUS ControlRequestGetVolumeRange(
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
     RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
+
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, " - interface %u, entity id 0x%02x, channel 0x%02x", interfaceNumber, entityID, channel);
 
     NTSTATUS status = GetRangeWithAllocate(
         deviceContext->UsbDevice,
@@ -1267,10 +1273,10 @@ NTSTATUS ControlRequestSetAutoGainControl(
 PAGED_CODE_SEG
 _Use_decl_annotations_
 NTSTATUS ControlRequestGetCurrentConnectorState(
-    PDEVICE_CONTEXT deviceContext,
-    UCHAR           interfaceNumber,
-    UCHAR           entityID,
-    NS_USBAudio::AUDIO_CHANNEL_CLUSTER_DESCRIPTOR& connectorState
+    PDEVICE_CONTEXT                                 deviceContext,
+    UCHAR                                           interfaceNumber,
+    UCHAR                                           entityID,
+    NS_USBAudio::AUDIO_CHANNEL_CLUSTER_DESCRIPTOR & connectorState
 )
 {
     PAGED_CODE();

@@ -226,7 +226,7 @@ NTSTATUS ControlRequestGetCurrentConnectorState(
     _In_ PDEVICE_CONTEXT deviceContext,
     _In_ UCHAR           interfaceNumber,
     _In_ UCHAR           entityID,
-    _Out_ NS_USBAudio::AUDIO_CHANNEL_CLUSTER_DESCRIPTOR& connectorState
+    _Out_ NS_USBAudio::AUDIO_CHANNEL_CLUSTER_DESCRIPTOR & connectorState
 );
 
 #if 0

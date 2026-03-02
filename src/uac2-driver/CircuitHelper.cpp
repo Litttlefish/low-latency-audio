@@ -90,7 +90,7 @@ struct AFX_FIND_KSATTRIBUTE_BY_ID
 PAGED_CODE_SEG
 NTSTATUS
 EvtJackRetrievePresence(
-    _In_          ACXJACK Jack,
+    _In_ ACXJACK  Jack,
     _In_ PBOOLEAN IsConnected
 )
 {

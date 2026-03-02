@@ -1767,7 +1767,7 @@ void StreamObject::MixingEngineThreadMain(
                 }
                 else if (hasInputIsochronousInterface && hasOutputIsochronousInterface)
                 {
-					// Perform the sync evaluation only when both input and output isochronous transfer interfaces are present.
+                    // Perform the sync evaluation only when both input and output isochronous transfer interfaces are present.
                     ASSERT(inputInterval != 0);
                     ASSERT(outputInterval != 0);
 

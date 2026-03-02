@@ -950,10 +950,10 @@ Return Value:
         // For more information on audio jack see: https://docs.microsoft.com/en-us/windows/win32/api/devicetopology/ns-devicetopology-ksjack_description
         //
         {
-            ACX_JACK_CALLBACKS   jackCallbacks;
-            ACX_JACK_CONFIG jackCfg;
-            ACXJACK         jack;
-            PJACK_CONTEXT   jackContext;
+            ACX_JACK_CALLBACKS jackCallbacks;
+            ACX_JACK_CONFIG    jackCfg;
+            ACXJACK            jack;
+            PJACK_CONTEXT      jackContext;
 
             ACX_JACK_CALLBACKS_INIT(&jackCallbacks);
             jackCallbacks.EvtAcxJackRetrievePresenceState = EvtJackRetrievePresence;
@@ -1425,7 +1425,7 @@ CodecC_ConnectorChangeStateNotification(
 
     for (ULONG pinIndex = 0; pinIndex < pinCount; ++pinIndex)
     {
-        ULONG pinID = pinIndex * CodecCapturePinCount + CodecCaptureBridgePin;
+        ULONG  pinID = pinIndex * CodecCapturePinCount + CodecCaptureBridgePin;
         ACXPIN pin = AcxCircuitGetPinById(Circuit, pinID);
 
         TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_CIRCUIT, "pinID %u, pin %p", pinID, pin);
@@ -1458,8 +1458,8 @@ CodecC_ConnectorChangeStateNotification(
             continue;
         }
 
-        ACXJACK			jack = pinContext->jack;
-        PJACK_CONTEXT	jackContext = GetJackContext(jack);
+        ACXJACK       jack = pinContext->jack;
+        PJACK_CONTEXT jackContext = GetJackContext(jack);
         jackContext->IsConnected = isConnected;
         AcxJackChangeStateNotification(jack);
     }

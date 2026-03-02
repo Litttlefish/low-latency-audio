@@ -220,7 +220,7 @@ void InterruptMessageWorkerThreadFunction(
                 }
                 if (deviceContext->Capture != nullptr)
                 {
-                    // CodecC_VolumeChangeLevelNotification(deviceContext->Render, entityID);
+                    CodecC_VolumeChangeLevelNotification(deviceContext->Capture, entityID);
                 }
             }
         }
@@ -236,7 +236,7 @@ void InterruptMessageWorkerThreadFunction(
                 }
                 if (deviceContext->Capture != nullptr)
                 {
-                    // CodecC_MuteChangeStateNotification(deviceContext->Render, entityID);
+                    CodecC_MuteChangeStateNotification(deviceContext->Capture, entityID);
                 }
             }
         }
