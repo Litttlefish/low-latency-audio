@@ -1310,6 +1310,9 @@ USBAudioAcxDriverEvtDeviceD0Exit(
         TraceEvents(TRACE_LEVEL_INFORMATION, FLAG_POWER, "Stop USB isochronous transfer.");
 
         StopIsoStream(deviceContext);
+
+        InterlockedExchange(&deviceContext->StartCounterAsio, 0);
+        InterlockedExchange(&deviceContext->StartCounterWdmAudio, 0);
     }
     WdfWaitLockRelease(deviceContext->StreamWaitLock);
 
