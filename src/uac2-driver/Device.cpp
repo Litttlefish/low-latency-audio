@@ -1379,25 +1379,27 @@ Codec_SetPowerPolicy(
     //
     // Init the idle policy structure.
     //
-    WDF_POWER_POLICY_S0_IDLE_CAPABILITIES idolCapabilies;
-    if (deviceContext->UsbAudioConfiguration->HasInterruptDataMessageInterfaces() && deviceContext->InterruptMessageProperty.IsValid)
-    {
-        //
-        // To support power saving, specify IdleCanWakeFromS0 only when interrupt data messages from the device are valid.
-        //
-        idolCapabilies = IdleCanWakeFromS0;
-        TraceEvents(TRACE_LEVEL_VERBOSE, FLAG_POWER, " - IdleCanWakeFromS0");
-    }
-    else
-    {
-        idolCapabilies = IdleCannotWakeFromS0;
-        TraceEvents(TRACE_LEVEL_VERBOSE, FLAG_POWER, " - IdleCannotWakeFromS0");
-    }
     WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS idleSettings;
-    WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS_INIT(&idleSettings, idolCapabilies);
+    WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS_INIT(&idleSettings, IdleCannotWakeFromS0);
     idleSettings.IdleTimeout = IDLE_POWER_TIMEOUT;
     idleSettings.IdleTimeoutType = SystemManagedIdleTimeoutWithHint;
     idleSettings.ExcludeD3Cold = deviceContext->ExcludeD3Cold;
+    
+    if (deviceContext->UsbAudioConfiguration->HasInterruptDataMessageInterfaces() && deviceContext->InterruptMessageProperty.IsValid)
+    {
+        //
+        // To receive interrupt data messages from the device, configure the device so that its power state always remains at D0.
+        //
+        idleSettings.Enabled = WdfFalse;
+        idleSettings.UserControlOfIdleSettings = IdleDoNotAllowUserControl;
+        TraceEvents(TRACE_LEVEL_VERBOSE, FLAG_POWER, " - WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS::Enable WdfFalse");
+        TraceEvents(TRACE_LEVEL_VERBOSE, FLAG_POWER, " - IdleDoNotAllowUserControl");
+    }
+    else
+    {
+        idleSettings.Enabled = WdfTrue;
+        TraceEvents(TRACE_LEVEL_VERBOSE, FLAG_POWER, " - WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS::Enable WdfTrue");
+    }
 
     RETURN_NTSTATUS_IF_FAILED(WdfDeviceAssignS0IdleSettings(device, &idleSettings));
 
