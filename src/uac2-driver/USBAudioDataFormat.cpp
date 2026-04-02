@@ -65,7 +65,7 @@ USBAudioDataFormat::USBAudioDataFormat(
     UCHAR bitResolution
 )
     : m_formatType(formatType),
-      m_format(ConverBmFormats(formats)),
+      m_format(ConvertBmFormats(formats)),
       m_subslotSize(subslotSize),
       m_bitResolution(bitResolution)
 {
@@ -188,7 +188,7 @@ USBAudioDataFormat::Create(
 _Use_decl_annotations_
 PAGED_CODE_SEG
 ULONG
-USBAudioDataFormat::ConverBmFormats(
+USBAudioDataFormat::ConvertBmFormats(
     UCHAR formats[4]
 )
 {
@@ -469,7 +469,7 @@ USBAudioDataFormat::ConverSampleFormatToSampleType(
 PAGED_CODE_SEG
 _Use_decl_annotations_
 ULONG
-USBAudioDataFormat::ConverSampleTypeToBytesPerSample(
+USBAudioDataFormat::ConvertSampleTypeToBytesPerSample(
     UACSampleType sampleType
 )
 {
@@ -819,7 +819,7 @@ USBAudioDataFormatManager::SetUSBAudioDataFormat(
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DESCRIPTOR, "%!FUNC! Entry, %u, %u, %u, %u, %u, %u, %u", formatType, formats[0], formats[1], formats[2], formats[3], subslotSize, bitResolution);
 
-    ULONG format = USBAudioDataFormat::ConverBmFormats(formats);
+    ULONG format = USBAudioDataFormat::ConvertBmFormats(formats);
 
     for (ULONG formatMask = 0x01; formatMask != 0; formatMask <<= 1)
     {

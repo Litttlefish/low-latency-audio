@@ -41,6 +41,7 @@ Environment:
 
 class CStreamEngine;
 class ContiguousMemory;
+class WorkerThread;
 class MixingEngineThread;
 class RtPacketObject;
 class StreamObject;
@@ -198,6 +199,14 @@ typedef struct _DEVICE_CONTEXT
         UCHAR FeedbackInterval;
     } FEEDBACK_PROPERTY;
 
+    typedef struct INTERRUPT_MESSAGE_PROPERTY_
+    {
+        bool  IsValid;
+        UCHAR InterfaceNumber;
+        UCHAR EndpointNumber;
+        UCHAR Interval;
+    } INTERRUPT_MESSAGE_PROPERTY;
+
     ACXCIRCUIT                         Render;
     ACXCIRCUIT                         Capture;
     WDF_TRI_STATE                      ExcludeD3Cold;
@@ -213,6 +222,7 @@ typedef struct _DEVICE_CONTEXT
     SelectedInterfaceAndPipe           InputInterfaceAndPipe;
     SelectedInterfaceAndPipe           OutputInterfaceAndPipe;
     SelectedInterfaceAndPipe           FeedbackInterfaceAndPipe;
+    SelectedInterfaceAndPipe           InterruptInterfaceAndPipe;
     WdfUsbTargetDeviceSelectConfigType SelectConfigType;
     PWDF_USB_INTERFACE_SETTING_PAIR    Pairs;
     UCHAR                              NumberOfConfiguredInterfaces;
@@ -238,6 +248,8 @@ typedef struct _DEVICE_CONTEXT
     AUDIO_PROPERTY                     InputProperty;
     AUDIO_PROPERTY                     OutputProperty;
     FEEDBACK_PROPERTY                  FeedbackProperty;
+    INTERRUPT_MESSAGE_PROPERTY         InterruptMessageProperty;
+    WorkerThread *                     InterruptMessageWorkerThread;
     ULONG                              FramesPerMs;         // Number of (micro)frames per ms. 1 or 8
     ULONG                              ClassicFramesPerIrp;
     bool                               IsDeviceAdaptive;    // True if the output Endpoint is Adaptive
@@ -561,44 +573,6 @@ bool USBAudioAcxDriverHasAsioOwnership(
 
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
-NTSTATUS USBAudioAcxDriverLoadInternalParametersFromDeviceRegistry(
-    _In_ PDEVICE_CONTEXT deviceContext
-);
-
-__drv_maxIRQL(PASSIVE_LEVEL)
-PAGED_CODE_SEG
-NTSTATUS USBAudioAcxDriverSaveInternalParametersToDeviceRegistry(
-    _In_ PDEVICE_CONTEXT deviceContext
-);
-
-__drv_maxIRQL(PASSIVE_LEVEL)
-PAGED_CODE_SEG
-NTSTATUS SaveAsioDeviceToRegistry(
-    _In_ PUNICODE_STRING asioDevice
-);
-
-__drv_maxIRQL(PASSIVE_LEVEL)
-PAGED_CODE_SEG
-NTSTATUS LoadAsioDeviceFromRegistry(
-    _Out_ PUNICODE_STRING asioDevice
-);
-
-__drv_maxIRQL(PASSIVE_LEVEL)
-PAGED_CODE_SEG
-NTSTATUS SaveSampleRateToRegistry(
-    _In_ WDFDEVICE device,
-    _In_ ULONG     sampleRate
-);
-
-__drv_maxIRQL(PASSIVE_LEVEL)
-PAGED_CODE_SEG
-NTSTATUS LoadSampleRateFromRegistry(
-    _In_ WDFDEVICE device,
-    _Out_ ULONG &  sampleRate
-);
-
-__drv_maxIRQL(PASSIVE_LEVEL)
-PAGED_CODE_SEG
 VOID EvtUSBAudioAcxDriverGetAudioProperty(
     _In_ WDFOBJECT  object,
     _In_ WDFREQUEST request
@@ -730,7 +704,21 @@ VOID EvtUSBAudioAcxDriverGetAsioDevice(
     _In_ WDFREQUEST request
 );
 
+__drv_maxIRQL(DISPATCH_LEVEL)
+NONPAGED_CODE_SEG
 EVT_WDF_REQUEST_COMPLETION_ROUTINE USBAudioAcxDriverEvtIsoRequestCompletionRoutine;
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS USBAudioAcxDriverStartInterruptDataReception(
+    _In_ PDEVICE_CONTEXT deviceContext
+);
+
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS USBAudioAcxDriverStopInterruptDataReception(
+    _In_ PDEVICE_CONTEXT deviceContext
+);
 
 __drv_maxIRQL(DISPATCH_LEVEL)
 NONPAGED_CODE_SEG

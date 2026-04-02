@@ -52,7 +52,7 @@ class TransferObject
         _In_ ULONG  maxXferSize
     );
 
-    __drv_maxIRQL(DIAPATCH_LEVEL)
+    __drv_maxIRQL(DISPATCH_LEVEL)
     NONPAGED_CODE_SEG
     void Free();
 
