@@ -1363,6 +1363,17 @@ Return Value:
 
     // ASSERT(IsEqualGUID(*SignalProcessingMode, AUDIO_SIGNALPROCESSINGMODE_RAW));
 
+    ACXDATAFORMAT selectedDataFormat = StreamFormat;
+    if (GetFormatTagFromAcxDataFormat(StreamFormat) != WAVE_FORMAT_EXTENSIBLE)
+    {
+        status = ConvertWaveFormatExToWaveFormatExtensible(Device, Circuit, StreamFormat, selectedDataFormat);
+        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_CIRCUIT, "ConvertWaveFormatExToWaveFormatExtensible %!STATUS!", status);
+        if (!NT_SUCCESS(status))
+        {
+            return status;
+        }
+    }
+
     ASSERT(Circuit != nullptr);
     circuitContext = GetRenderCircuitContext(Circuit);
     ASSERT(circuitContext);
@@ -1388,7 +1399,7 @@ Return Value:
         ACXDATAFORMAT stereoDataFormat;
         RETURN_NTSTATUS_IF_FAILED(SplitAcxDataFormatByDeviceChannels(Device, Circuit, pinContext->NumOfChannelsPerDevice, stereoDataFormat, dataFormat));
 
-        if (!AcxDataFormatIsEqual(stereoDataFormat, StreamFormat))
+        if (!AcxDataFormatIsEqual(stereoDataFormat, selectedDataFormat))
         {
             status = STATUS_NOT_SUPPORTED;
             TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_CIRCUIT, "%!FUNC! Exit %!STATUS!", status);
@@ -1436,7 +1447,7 @@ Return Value:
     // Create the virtual streaming engine which will control
     // streaming logic for the render circuit.
     //
-    renderStreamEngine = new (POOL_FLAG_NON_PAGED, DRIVER_TAG) CRenderStreamEngine(deviceContext, stream, StreamFormat, pinContext->DeviceIndex, pinContext->Channel, pinContext->NumOfChannelsPerDevice, FALSE /* , nullptr */);
+    renderStreamEngine = new (POOL_FLAG_NON_PAGED, DRIVER_TAG) CRenderStreamEngine(deviceContext, stream, selectedDataFormat, pinContext->DeviceIndex, pinContext->Channel, pinContext->NumOfChannelsPerDevice, FALSE /* , nullptr */);
     RETURN_NTSTATUS_IF_TRUE(renderStreamEngine == nullptr, STATUS_INSUFFICIENT_RESOURCES);
 
     streamContext = GetStreamEngineContext(stream);

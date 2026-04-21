@@ -146,3 +146,17 @@ void TraceAcxDataFormat(
     _In_ UCHAR         DebugPrintLevel,
     _In_ ACXDATAFORMAT DataFormat
 );
+
+PAGED_CODE_SEG
+WORD GetFormatTagFromAcxDataFormat(
+    _In_    ACXDATAFORMAT   DataFormat
+);
+
+PAGED_CODE_SEG
+NTSTATUS ConvertWaveFormatExToWaveFormatExtensible
+(
+    _In_    WDFDEVICE       Device,
+    _In_    ACXCIRCUIT      Circuit,
+    _In_    ACXDATAFORMAT   DataFormatEx,
+    _Out_   ACXDATAFORMAT& DataFormatExtensible
+);
