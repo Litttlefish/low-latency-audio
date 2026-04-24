@@ -263,6 +263,7 @@ ControlRequest(
 // Layout 1 Parameter Block
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
+_Success_(NT_SUCCESS(return))
 static NTSTATUS GetCurrentSetting(
     _In_ PDEVICE_CONTEXT deviceContext,
     _In_ UCHAR           interfaceNumber,
@@ -297,6 +298,7 @@ static NTSTATUS GetCurrentSetting(
 // Layout 2 Parameter Block
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
+_Success_(NT_SUCCESS(return))
 static NTSTATUS GetCurrentSetting(
     _In_ PDEVICE_CONTEXT deviceContext,
     _In_ UCHAR           interfaceNumber,
@@ -331,6 +333,7 @@ static NTSTATUS GetCurrentSetting(
 // Layout 3 Parameter Block
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
+_Success_(NT_SUCCESS(return))
 static NTSTATUS GetCurrentSetting(
     _In_ PDEVICE_CONTEXT deviceContext,
     _In_ UCHAR           interfaceNumber,
@@ -643,7 +646,7 @@ Return Value:
 
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
-static _Success_(return)
+static _Success_(NT_SUCCESS(return))
 NTSTATUS GetRangeWithAllocate(
     _In_ WDFOBJECT       parentObject,
     _In_ PDEVICE_CONTEXT deviceContext,
@@ -689,7 +692,7 @@ NTSTATUS GetRangeWithAllocate(
 
 __drv_maxIRQL(PASSIVE_LEVEL)
 PAGED_CODE_SEG
-static _Success_(return)
+static _Success_(NT_SUCCESS(return))
 NTSTATUS GetRangeWithAllocate(
     _In_ WDFOBJECT       parentObject,
     _In_ PDEVICE_CONTEXT deviceContext,
@@ -1074,7 +1077,7 @@ NTSTATUS ControlRequestGetMute(
         mute = true;
     }
 
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!", status);
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!, mute %!bool!", status, mute);
     return status;
 }
 
@@ -1104,7 +1107,7 @@ NTSTATUS ControlRequestSetMute(
         current
     );
 
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!", status);
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!, mute %u", status, current);
     return status;
 }
 
@@ -1123,6 +1126,8 @@ NTSTATUS ControlRequestGetVolume(
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
     RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, " - interface %u, entity id 0x%02x, channel 0x%02x", interfaceNumber, entityID, channel);
+
     NTSTATUS status = GetCurrentSetting(
         deviceContext,
         interfaceNumber,
@@ -1132,7 +1137,7 @@ NTSTATUS ControlRequestGetVolume(
         volume
     );
 
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!", status);
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!, volume %u (0x%x)", status, volume, volume);
     return status;
 }
 
@@ -1151,6 +1156,8 @@ NTSTATUS ControlRequestSetVolume(
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
     RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
 
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, " - interface %u, entity id 0x%02x, channel 0x%02x, volume 0x%04x", interfaceNumber, entityID, channel, volume);
+
     NTSTATUS status = SetCurrentSetting(
         deviceContext,
         interfaceNumber,
@@ -1160,7 +1167,7 @@ NTSTATUS ControlRequestSetVolume(
         volume
     );
 
-    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!", status);
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!, volume %u (0x%x)", status, volume, volume);
     return status;
 }
 
@@ -1179,6 +1186,8 @@ NTSTATUS ControlRequestGetVolumeRange(
 
     RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
     RETURN_NTSTATUS_IF_TRUE(!deviceContext->UsbAudioConfiguration->IsUSBAudio2(), STATUS_NOT_SUPPORTED);
+
+    TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, " - interface %u, entity id 0x%02x, channel 0x%02x", interfaceNumber, entityID, channel);
 
     NTSTATUS status = GetRangeWithAllocate(
         deviceContext->UsbDevice,
@@ -1258,6 +1267,48 @@ NTSTATUS ControlRequestSetAutoGainControl(
     );
 
     TraceEvents(TRACE_LEVEL_VERBOSE, TRACE_CTRLREQUEST, "%!FUNC! %!STATUS!", status);
+    return status;
+}
+
+PAGED_CODE_SEG
+_Use_decl_annotations_
+NTSTATUS ControlRequestGetCurrentConnectorState(
+    PDEVICE_CONTEXT                                 deviceContext,
+    UCHAR                                           interfaceNumber,
+    UCHAR                                           entityID,
+    NS_USBAudio::AUDIO_CHANNEL_CLUSTER_DESCRIPTOR & connectorState
+)
+{
+    PAGED_CODE();
+
+    NTSTATUS status = STATUS_SUCCESS;
+
+    RETURN_NTSTATUS_IF_TRUE(deviceContext == nullptr, STATUS_INVALID_PARAMETER);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_CTRLREQUEST, "%!FUNC! Entry");
+
+    auto setBufferScope = wil::scope_exit(
+        [&]() {
+            TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_CTRLREQUEST, "ControlRequestGetConnectorInsertionStatus Exit %!STATUS!", status);
+        }
+    );
+
+    RtlZeroMemory(&connectorState, sizeof(connectorState));
+
+    ULONG dataLength = 0;
+    status = ControlRequest(
+        deviceContext,
+        UsbMakeBmRequestType(BMREQUEST_DEVICE_TO_HOST, BMREQUEST_CLASS, BMREQUEST_TO_INTERFACE),
+        NS_USBAudio0200::CUR,
+        (((USHORT)NS_USBAudio0200::TE_CONNECTOR_CONTROL) << 8),
+        (((USHORT)entityID) << 8) | interfaceNumber,
+        &connectorState,
+        sizeof(connectorState),
+        &dataLength
+    );
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_CTRLREQUEST, "bNrChannels %02x, bmChannelConfig %08x, iChannelNames %02x", connectorState.bNrChannels, connectorState.bmChannelConfig, connectorState.iChannelNames);
+
     return status;
 }
 

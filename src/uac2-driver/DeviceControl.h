@@ -220,6 +220,15 @@ NTSTATUS ControlRequestSetAutoGainControl(
     _In_ bool            autoGain
 );
 
+__drv_maxIRQL(PASSIVE_LEVEL)
+PAGED_CODE_SEG
+NTSTATUS ControlRequestGetCurrentConnectorState(
+    _In_ PDEVICE_CONTEXT deviceContext,
+    _In_ UCHAR           interfaceNumber,
+    _In_ UCHAR           entityID,
+    _Out_ NS_USBAudio::AUDIO_CHANNEL_CLUSTER_DESCRIPTOR & connectorState
+);
+
 #if 0
 // UAC 1.0 only
 __drv_maxIRQL(PASSIVE_LEVEL)

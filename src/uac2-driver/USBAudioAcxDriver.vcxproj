@@ -32,6 +32,7 @@
     <ClCompile Include="DeviceControl.cpp" />
     <ClCompile Include="Driver.cpp" />
     <ClCompile Include="ErrorStatistics.cpp" />
+    <ClCompile Include="InterruptDataMessage.cpp" />
     <ClCompile Include="MixingEngineThread.cpp" />
     <ClCompile Include="NewDelete.cpp" />
     <ClCompile Include="RenderCircuit.cpp" />
@@ -41,6 +42,7 @@
     <ClCompile Include="RtPacketObject.cpp" />
     <ClCompile Include="USBAudioConfiguration.cpp" />
     <ClCompile Include="USBAudioDataFormat.cpp" />
+    <ClCompile Include="WorkerThread.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Inc\UAC_User.h" />
@@ -53,6 +55,7 @@
     <ClInclude Include="DeviceControl.h" />
     <ClInclude Include="Driver.h" />
     <ClInclude Include="ErrorStatistics.h" />
+    <ClInclude Include="InterruptDataMessage.h" />
     <ClInclude Include="MixingEngineThread.h" />
     <ClInclude Include="NewDelete.h" />
     <ClInclude Include="Private.h" />
@@ -67,6 +70,7 @@
     <ClInclude Include="RtPacketObject.h" />
     <ClInclude Include="USBAudioConfiguration.h" />
     <ClInclude Include="USBAudioDataFormat.h" />
+    <ClInclude Include="WorkerThread.h" />
   </ItemGroup>
   <ItemGroup>
     <Inf Include="USBAudio2-ACX.inf" />

@@ -153,7 +153,7 @@ typedef int BOOL;
 #endif
 
 #define ALL_CHANNELS_ID     UINT32_MAX
-#define MAX_CHANNELS        2
+#define MAX_CHANNELS        32
 
 //
 // Ks support.
@@ -210,7 +210,10 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(ELEMENT_CONTEXT, GetElementContext)
 //
 typedef struct _MUTE_ELEMENT_CONTEXT
 {
-    BOOL MuteState[MAX_CHANNELS];
+    WDFDEVICE Device;
+    bool      MuteState[MAX_CHANNELS];
+    UCHAR     EntityID;
+    ULONG     NumberOfChannels;
 } MUTE_ELEMENT_CONTEXT, *PMUTE_ELEMENT_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(MUTE_ELEMENT_CONTEXT, GetMuteElementContext)
@@ -220,7 +223,10 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(MUTE_ELEMENT_CONTEXT, GetMuteElementContext)
 //
 typedef struct _VOLUME_ELEMENT_CONTEXT
 {
-    LONG VolumeLevel[MAX_CHANNELS];
+    WDFDEVICE Device;
+    LONG      VolumeLevel[MAX_CHANNELS];
+    UCHAR     EntityID;
+    ULONG     NumberOfChannels;
 } VOLUME_ELEMENT_CONTEXT, *PVOLUME_ELEMENT_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(VOLUME_ELEMENT_CONTEXT, GetVolumeElementContext)
@@ -255,7 +261,7 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(FORMAT_CONTEXT, GetFormatContext)
 //
 typedef struct _JACK_CONTEXT
 {
-    ULONG Dummy;
+    BOOLEAN IsConnected;
 } JACK_CONTEXT, *PJACK_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(JACK_CONTEXT, GetJackContext)
@@ -335,6 +341,7 @@ typedef struct _CODEC_PIN_CONTEXT
     ULONG          DeviceIndex;
     ULONG          Channel;
     ULONG          NumOfChannelsPerDevice;
+    ACXJACK        jack;
 } CODEC_PIN_CONTEXT, *PCODEC_PIN_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(CODEC_PIN_CONTEXT, GetCodecPinContext)
@@ -393,6 +400,7 @@ typedef struct _CODEC_RENDER_CIRCUIT_CONTEXT
     WDFMEMORY      MuteElementsMemory;
     ACXMUTE *      MuteElements;
     ACXAUDIOENGINE AudioEngineElement;
+    ULONG          NumOfDevices;
 } CODEC_RENDER_CIRCUIT_CONTEXT, *PCODEC_RENDER_CIRCUIT_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(CODEC_RENDER_CIRCUIT_CONTEXT, GetRenderCircuitContext)
@@ -462,6 +470,27 @@ CodecR_CreateRenderCircuit(
     _Out_ ACXCIRCUIT *          Circuit
 );
 
+PAGED_CODE_SEG
+NTSTATUS
+CodecR_VolumeChangeLevelNotification(
+    _In_ ACXCIRCUIT Circuit,
+    _In_ UCHAR      EntityID
+);
+
+PAGED_CODE_SEG
+NTSTATUS
+CodecR_MuteChangeStateNotification(
+    _In_ ACXCIRCUIT Circuit,
+    _In_ UCHAR      EntityID
+);
+
+PAGED_CODE_SEG
+NTSTATUS
+CodecR_ConnectorChangeStateNotification(
+    _In_ ACXCIRCUIT Circuit,
+    _In_ UCHAR      EntityID
+);
+
 /////////////////////////////////////////////////////////
 //
 // Codec Capture (microphone) definitions
@@ -476,6 +505,7 @@ typedef struct _CODEC_CAPTURE_CIRCUIT_CONTEXT
     ACXVOLUME * VolumeElements;
     WDFMEMORY   MuteElementsMemory;
     ACXMUTE *   MuteElements;
+    ULONG       NumOfDevices;
     // ACXKEYWORDSPOTTER KeywordSpotter;
 } CODEC_CAPTURE_CIRCUIT_CONTEXT, *PCODEC_CAPTURE_CIRCUIT_CONTEXT;
 
@@ -524,6 +554,18 @@ EVT_ACX_PIN_RETRIEVE_NAME CodecC_EvtAcxPinRetrieveName;
 
 NONPAGED_CODE_SEG
 EVT_WDF_DEVICE_CONTEXT_CLEANUP CodecC_EvtPinContextCleanup;
+
+PAGED_CODE_SEG
+EVT_ACX_MUTE_ASSIGN_STATE CodecC_EvtMuteAssignState;
+
+PAGED_CODE_SEG
+EVT_ACX_MUTE_RETRIEVE_STATE CodecC_EvtMuteRetrieveState;
+// EVT_ACX_VOLUME_ASSIGN_LEVEL         CodecC_EvtVolumeAssignLevel;
+PAGED_CODE_SEG
+EVT_ACX_VOLUME_RETRIEVE_LEVEL CodecC_EvtVolumeRetrieveLevel;
+PAGED_CODE_SEG
+EVT_ACX_RAMPED_VOLUME_ASSIGN_LEVEL CodecC_EvtRampedVolumeAssignLevel;
+
 // EVT_ACX_KEYWORDSPOTTER_RETRIEVE_ARM     CodecC_EvtAcxKeywordSpotterRetrieveArm;
 // EVT_ACX_KEYWORDSPOTTER_ASSIGN_ARM       CodecC_EvtAcxKeywordSpotterAssignArm;
 // EVT_ACX_KEYWORDSPOTTER_ASSIGN_PATTERNS  CodecC_EvtAcxKeywordSpotterAssignPatterns;
@@ -538,6 +580,27 @@ CodecC_CreateCaptureCircuit(
     _In_ const UNICODE_STRING * CircuitName,
     _In_ const ULONG            SupportedSampleRate,
     _Out_ ACXCIRCUIT *          Circuit
+);
+
+PAGED_CODE_SEG
+NTSTATUS
+CodecC_VolumeChangeLevelNotification(
+    _In_ ACXCIRCUIT Circuit,
+    _In_ UCHAR      EntityID
+);
+
+PAGED_CODE_SEG
+NTSTATUS
+CodecC_MuteChangeStateNotification(
+    _In_ ACXCIRCUIT Circuit,
+    _In_ UCHAR      EntityID
+);
+
+PAGED_CODE_SEG
+NTSTATUS
+CodecC_ConnectorChangeStateNotification(
+    _In_ ACXCIRCUIT Circuit,
+    _In_ UCHAR      EntityID
 );
 
 /* make internal prototypes usable from C++ */

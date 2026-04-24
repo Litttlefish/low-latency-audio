@@ -99,7 +99,7 @@ class USBAudioDataFormat
 
     static __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    ULONG ConverBmFormats(
+    ULONG ConvertBmFormats(
         _In_reads_(4) UCHAR formats[4]
     );
 
@@ -135,7 +135,7 @@ class USBAudioDataFormat
 
     static __drv_maxIRQL(PASSIVE_LEVEL)
     PAGED_CODE_SEG
-    ULONG ConverSampleTypeToBytesPerSample(
+    ULONG ConvertSampleTypeToBytesPerSample(
         _In_ UACSampleType sampleType
     );
 
