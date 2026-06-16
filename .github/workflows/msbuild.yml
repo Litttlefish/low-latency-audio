@@ -43,7 +43,7 @@ jobs:
         path: asio_sdk_temp
       
     - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@v2
+      uses: microsoft/setup-msbuild@v3
 
     - name: Place ASIO common folder
       working-directory: ${{env.GITHUB_WORKSPACE}}
@@ -58,10 +58,6 @@ jobs:
           echo Robocopy completed successfully with warnings (code %ERRORLEVEL%).
           exit /b 0
         )
-
-    - name: Setup DDK
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run:  winget install --source winget --exact --id Microsoft.WindowsWDK.10.0.26100
         
     - uses: humbletim/vsdevenv-shell@v2
 
