@@ -37,6 +37,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
       with:
+        repository: Litttlefish/low-latency-audio
         ref: yamaha-main
         
     - uses: actions/checkout@v6
