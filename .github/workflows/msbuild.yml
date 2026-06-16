@@ -32,7 +32,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-2022
+    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v6
@@ -67,7 +67,24 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       shell: cmd
       run:  winget install --source winget --exact --id Microsoft.WindowsWDK.10.0.26100
-        
+      
+    - name: Check DriverKit files
+      shell: powershell
+      run:  |
+        $wdk = "C:\Program Files (x86)\Windows Kits\10\build\10.0.26100.0\bin"
+    
+        Write-Host "DLL exists?"
+        Test-Path "$wdk\Microsoft.DriverKit.Build.Tasks.18.0.dll"
+    
+        Write-Host "Directory contents:"
+        Get-ChildItem $wdk | Select Name
+
+    - name: Check VS installation
+      shell: powershell
+      run: |
+        & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+          -products * `
+          -format json
         
     - uses: humbletim/vsdevenv-shell@v2
 
