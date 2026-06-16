@@ -22,6 +22,7 @@
     <None Include="..\README.md" />
     <None Include="packages.config" />
     <None Include="ReadMe.txt" />
+    <PackageReference Include="Microsoft.Windows.WDK.x64" Version="10.0.26100.0" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AsioBufferObject.cpp" />
