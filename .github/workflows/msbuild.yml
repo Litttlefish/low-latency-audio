@@ -58,10 +58,6 @@ jobs:
           echo Robocopy completed successfully with warnings (code %ERRORLEVEL%).
           exit /b 0
         )
-
-    # - name: Setup DDK
-    #   working-directory: ${{env.GITHUB_WORKSPACE}}
-    #   run:  winget install --source winget --exact --id Microsoft.WindowsWDK.10.0.26100
         
     - uses: humbletim/vsdevenv-shell@v2
 
