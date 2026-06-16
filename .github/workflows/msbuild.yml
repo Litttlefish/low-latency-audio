@@ -69,11 +69,13 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-      shell: vsdevenv x64 powershell {0}
-      run: .\build\build.ps1
+      shell: cmd
+      run: |
+        msbuild.exe -t:restore uac2-driver\USBAudioAcxDriver.sln -p:RestorePackagesConfig=true
+        msbuild.exe -p:Platform=x64 -p:Configuration=Release -verbosity:normal -target:Rebuild $acxSolution
       
     - name: Upload artifacts
       uses: actions/upload-artifact@v6
       with:
-        path: ./build/*
+        path: ./out/*
         retention-days: 3
