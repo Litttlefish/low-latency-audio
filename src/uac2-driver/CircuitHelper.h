@@ -69,21 +69,21 @@ static struct
 } s_PacketSizeConstraints =
 {
     {
-        ULONG(7.0 * (double)HNSTIME_PER_MILLISECOND),           // 7 ms minimum processing interval
+        ULONG(3.0 * (double)HNSTIME_PER_MILLISECOND),           // 7 ms minimum processing interval
         FILE_BYTE_ALIGNMENT,                                    // 1 byte packet size alignment
         0,                                                      // no maximum packet size constraint
         2,                                                      // 2 processing constraints follow
         {
             STATIC_AUDIO_SIGNALPROCESSINGMODE_RAW,              // constraint for raw processing mode
             0,                                                  // NA samples per processing frame
-            ULONG(7.0 * (double)HNSTIME_PER_MILLISECOND),       // 70000 hns (7ms) per processing frame
+            ULONG(3.0 * (double)HNSTIME_PER_MILLISECOND),       // 70000 hns (7ms) per processing frame
         }
     },
     {
         {
             STATIC_AUDIO_SIGNALPROCESSINGMODE_DEFAULT,          // constraint for default processing mode
             0,                                                  // NA samples per processing frame
-            ULONG(7.0 * (double)HNSTIME_PER_MILLISECOND),       // 70000 hns (7ms) per processing frame
+            ULONG(3.0 * (double)HNSTIME_PER_MILLISECOND),       // 70000 hns (7ms) per processing frame
         }
     }
 };
