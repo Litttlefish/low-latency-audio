@@ -36,6 +36,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+      with:
+        repository: Litttlefish/low-latency-audio
 
     - name: switch branch
       working-directory: ${{env.GITHUB_WORKSPACE}}
