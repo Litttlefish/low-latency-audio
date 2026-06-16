@@ -61,7 +61,7 @@ jobs:
 
     - name: Setup DDK
       working-directory: ${{env.GITHUB_WORKSPACE}}
-      run:  winget configure -f 'https://raw.githubusercontent.com/microsoft/Windows-driver-samples/main/_wdk_utils/winget/configs/wdk-vscommunity.dsc.yaml' --accept-configuration-agreements --accept-source-agreements
+      run:  winget configure -f 'https://raw.githubusercontent.com/microsoft/Windows-driver-samples/main/_wdk_utils/winget/configs/wdk-vscommunity.dsc.yaml' --accept-configuration-agreements
         
     - uses: humbletim/vsdevenv-shell@v2
 
