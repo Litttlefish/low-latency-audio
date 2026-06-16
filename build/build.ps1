@@ -41,7 +41,7 @@ foreach($configuration in $configurations)
     foreach($acxPlatform in ("x64"))
     {
         Write-Host "Building ACX Driver: $configuration|$acxPlatform"
-        msbuild.exe -p:Platform=$acxPlatform -p:Configuration=$configuration -verbosity:normal -target:Rebuild $acxSolution
+        msbuild.exe -p:Platform=$acxPlatform -p:Configuration=$configuration -verbosity:normal -target:Rebuild $acxSolution -p:WindowsTargetPlatformVersion=10.0.26100.0
         if ($LASTEXITCODE -ne 0)
         {
             Write-Host "MSBuild failed for $configuration $acxPlatform build. Exit code $LASTEXITCODE"
