@@ -66,7 +66,9 @@ jobs:
     - name: Setup DDK
       working-directory: ${{env.GITHUB_WORKSPACE}}
       shell: cmd
-      run:  winget install --source winget --exact --id Microsoft.WindowsWDK.10.0.26100
+      run:  |
+        winget install --source winget --exact --id Microsoft.WindowsSDK.10.0.28000
+        winget install --source winget --exact --id Microsoft.WindowsWDK.10.0.28000
       
     - name: Check DriverKit files
       shell: powershell
