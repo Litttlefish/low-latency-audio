@@ -71,8 +71,8 @@ jobs:
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       shell: cmd
       run: |
-        msbuild.exe -t:restore .\uac2-driver\USBAudioAcxDriver.sln -p:RestorePackagesConfig=true
-        msbuild.exe -p:Platform=x64 -p:Configuration=Release -verbosity:normal -target:Rebuild .\uac2-driver\USBAudioAcxDriver.sln
+        msbuild.exe -t:restore src\uac2-driver\USBAudioAcxDriver.sln -p:RestorePackagesConfig=true
+        msbuild.exe -p:Platform=x64 -p:Configuration=Release -verbosity:normal -target:Rebuild src\uac2-driver\USBAudioAcxDriver.sln
       
     - name: Upload artifacts
       uses: actions/upload-artifact@v6
