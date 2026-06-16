@@ -59,9 +59,9 @@ jobs:
           exit /b 0
         )
 
-    - name: Setup DDK
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run:  winget install Microsoft.WindowsWDK.10.0.26100 --accept-source-agreements
+  #  - name: Setup DDK
+  #    working-directory: ${{env.GITHUB_WORKSPACE}}
+  #    run:  winget install Microsoft.WindowsWDK.10.0.26100 --accept-source-agreements
         
     - uses: humbletim/vsdevenv-shell@v2
 
