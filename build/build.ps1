@@ -63,96 +63,96 @@ foreach($configuration in $configurations)
     }
     Write-Host
 
-    # build ASIO driver for x64 and Arm64EC
+    # # build ASIO driver for x64 and Arm64EC
 
-    msbuild.exe -t:restore $asioSolution -p:RestorePackagesConfig=true
+    # msbuild.exe -t:restore $asioSolution -p:RestorePackagesConfig=true
 
-    # foreach($asioPlatform in ("x64", "Arm64EC"))
-    foreach($asioPlatform in ("x64"))
-    {
-        Write-Host "Building ASIO Driver: $configuration|$asioPlatform"
-        msbuild.exe -p:Platform=$asioPlatform -p:Configuration=$configuration -verbosity:normal -target:Rebuild $asioSolution 
-        if ($LASTEXITCODE -ne 0)
-        {
-            Write-Host "MSBuild failed for $configuration $asioPlatform build. Exit code $LASTEXITCODE"
-            exit;
-        }
+    # # foreach($asioPlatform in ("x64", "Arm64EC"))
+    # foreach($asioPlatform in ("x64"))
+    # {
+    #     Write-Host "Building ASIO Driver: $configuration|$asioPlatform"
+    #     msbuild.exe -p:Platform=$asioPlatform -p:Configuration=$configuration -verbosity:normal -target:Rebuild $asioSolution 
+    #     if ($LASTEXITCODE -ne 0)
+    #     {
+    #         Write-Host "MSBuild failed for $configuration $asioPlatform build. Exit code $LASTEXITCODE"
+    #         exit;
+    #     }
 
-        # this is where the ASIO files (dll, pdb) are output to
-        $asioOutputFolder = "$vsfilesFolderOut\USBAsio\$asioPlatform\$configuration\"
-        Write-Host $asioOutputFolder
+    #     # this is where the ASIO files (dll, pdb) are output to
+    #     $asioOutputFolder = "$vsfilesFolderOut\USBAsio\$asioPlatform\$configuration\"
+    #     Write-Host $asioOutputFolder
 
-        # ensure the destination folders exist. We need to map the destination folder
-        # because Arm64X puts the output in Arm64EC output folder
+    #     # ensure the destination folders exist. We need to map the destination folder
+    #     # because Arm64X puts the output in Arm64EC output folder
 
-        if ($asioPlatform -eq "Arm64EC")
-        {
-            $destinationAsioPlatform = "Arm64"
-        }
-        else 
-        {
-            $destinationAsioPlatform = "x64"
-        }
+    #     if ($asioPlatform -eq "Arm64EC")
+    #     {
+    #         $destinationAsioPlatform = "Arm64"
+    #     }
+    #     else 
+    #     {
+    #         $destinationAsioPlatform = "x64"
+    #     }
 
-        $stagingTargetFolder = "$stagingFolder\$destinationAsioPlatform\$configuration\"
-        #New-Item -Path $stagingTargetFolder -ItemType Directory
+    #     $stagingTargetFolder = "$stagingFolder\$destinationAsioPlatform\$configuration\"
+    #     #New-Item -Path $stagingTargetFolder -ItemType Directory
 
-            # copy output files to staging
-        Copy-Item -Path "$asioOutputFolder*.dll" -Destination $stagingTargetFolder
-        Copy-Item -Path "$asioOutputFolder*.pdb" -Destination $stagingTargetFolder
+    #         # copy output files to staging
+    #     Copy-Item -Path "$asioOutputFolder*.dll" -Destination $stagingTargetFolder
+    #     Copy-Item -Path "$asioOutputFolder*.pdb" -Destination $stagingTargetFolder
 
-        Write-Host
-    }
-    Write-Host
+    #     Write-Host
+    # }
+    # Write-Host
 
-    # build ASIO Control Panel dialog for x64 and Arm64
+    # # build ASIO Control Panel dialog for x64 and Arm64
 
-    msbuild.exe -t:restore $controlPanelSolution -p:RestorePackagesConfig=true
+    # msbuild.exe -t:restore $controlPanelSolution -p:RestorePackagesConfig=true
 
-    # foreach($controlPanelPlatform in ("x64", "Arm64"))
-    foreach($controlPanelPlatform in ("x64"))
-    {
-        Write-Host "Building Control Panel:  $configuration|$controlPanelPlatform"
-        msbuild.exe -p:Platform=$controlPanelPlatform -p:Configuration=$configuration -verbosity:normal -target:Rebuild $controlPanelSolution
+    # # foreach($controlPanelPlatform in ("x64", "Arm64"))
+    # foreach($controlPanelPlatform in ("x64"))
+    # {
+    #     Write-Host "Building Control Panel:  $configuration|$controlPanelPlatform"
+    #     msbuild.exe -p:Platform=$controlPanelPlatform -p:Configuration=$configuration -verbosity:normal -target:Rebuild $controlPanelSolution
 
-        # this is where the ASIO files (dll, pdb) are output to
-        $controlPanelOutputFolder = "$vsfilesFolderOut\USBAsioControlPanel\$controlPanelPlatform\$configuration\"
-        Write-Host $controlPanelOutputFolder
+    #     # this is where the ASIO files (dll, pdb) are output to
+    #     $controlPanelOutputFolder = "$vsfilesFolderOut\USBAsioControlPanel\$controlPanelPlatform\$configuration\"
+    #     Write-Host $controlPanelOutputFolder
 
-        # ensure the destination folders exist. We need to map the destination folder
-        # because Arm64X puts the output in Arm64EC output folder
+    #     # ensure the destination folders exist. We need to map the destination folder
+    #     # because Arm64X puts the output in Arm64EC output folder
 
-        $stagingTargetFolder = "$stagingFolder\$controlPanelPlatform\$configuration\"
+    #     $stagingTargetFolder = "$stagingFolder\$controlPanelPlatform\$configuration\"
 
-        #New-Item -Path $stagingTargetFolder -ItemType Directory
+    #     #New-Item -Path $stagingTargetFolder -ItemType Directory
 
-            # copy output files to staging
-        Copy-Item -Path "$controlPanelOutputFolder*.exe" -Destination $stagingTargetFolder
+    #         # copy output files to staging
+    #     Copy-Item -Path "$controlPanelOutputFolder*.exe" -Destination $stagingTargetFolder
 
-        Write-Host
+    #     Write-Host
 
-        #Copy-Item -Path "$sourceRoot\USBAsioControlPanel\USBAsioControlPanel.exe" -Destination $stagingTargetFolder
-    }
+    #     #Copy-Item -Path "$sourceRoot\USBAsioControlPanel\USBAsioControlPanel.exe" -Destination $stagingTargetFolder
+    # }
 
-    # build installers
-    Write-Host "Building installers..."
+    # # build installers
+    # Write-Host "Building installers..."
 
-    # foreach($installerPlatform in ("x64", "Arm64"))
-    foreach($installerPlatform in ("x64"))
-    {
-        msbuild.exe -p:Platform=$installerPlatform -p:Configuration=$configuration -verbosity:normal -target:Rebuild $installerProject 
+    # # foreach($installerPlatform in ("x64", "Arm64"))
+    # foreach($installerPlatform in ("x64"))
+    # {
+    #     msbuild.exe -p:Platform=$installerPlatform -p:Configuration=$configuration -verbosity:normal -target:Rebuild $installerProject 
 
-        if ($LASTEXITCODE -ne 0)
-        {
-            Write-Host "MSBuild failed for $configuration $installerPlatform installer build. Exit code $LASTEXITCODE"
-            exit;
-        }
+    #     if ($LASTEXITCODE -ne 0)
+    #     {
+    #         Write-Host "MSBuild failed for $configuration $installerPlatform installer build. Exit code $LASTEXITCODE"
+    #         exit;
+    #     }
 
-        $releaseTargetFolder = "$releaseFolder\$installerPlatform\$configuration\"
-        New-Item -Path $releaseTargetFolder -ItemType Directory
+    #     $releaseTargetFolder = "$releaseFolder\$installerPlatform\$configuration\"
+    #     New-Item -Path $releaseTargetFolder -ItemType Directory
 
-        Copy-Item -Path "$installerProjectFolder\bin\$installerPlatform\$configuration\*.msi" -Destination "$releaseTargetFolder"
-    }
+    #     Copy-Item -Path "$installerProjectFolder\bin\$installerPlatform\$configuration\*.msi" -Destination "$releaseTargetFolder"
+    # }
 
 }
 
