@@ -65,7 +65,9 @@ jobs:
         
     - name: Setup DDK
       working-directory: ${{env.GITHUB_WORKSPACE}}
-      run:  winget install --source winget --exact --id Microsoft.WindowsWDK.10.0.26100
+      run:  |
+        winget install --source winget --exact --id Microsoft.WindowsSDK.10.0.26100
+        winget install --source winget --exact --id Microsoft.WindowsWDK.10.0.26100
         
     - uses: humbletim/vsdevenv-shell@v2
 
