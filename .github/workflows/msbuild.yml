@@ -32,7 +32,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
 
     steps:
     - uses: actions/checkout@v6
@@ -63,19 +63,21 @@ jobs:
   #    working-directory: ${{env.GITHUB_WORKSPACE}}
   #    run:  winget install Microsoft.WindowsWDK.10.0.26100 --accept-source-agreements
         
+    - name: Setup DDK
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run:  winget install --source winget --exact --id Microsoft.WindowsWDK.10.0.26100
+        
     - uses: humbletim/vsdevenv-shell@v2
 
     - name: Build
       working-directory: ${{env.GITHUB_WORKSPACE}}
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-      shell: cmd
-      run: |
-        msbuild.exe -t:restore src\uac2-driver\USBAudioAcxDriver.sln -p:RestorePackagesConfig=true
-        msbuild.exe -p:Platform=x64 -p:Configuration=Release -verbosity:normal -target:Rebuild src\uac2-driver\USBAudioAcxDriver.sln
+      shell: vsdevenv x64 powershell {0}
+      run: .\build\build.ps1
       
     - name: Upload artifacts
       uses: actions/upload-artifact@v6
       with:
-        path: ./out/*
+        path: ./build/*
         retention-days: 3
